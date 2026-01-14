@@ -117,6 +117,18 @@ export interface Testimonial {
   avatar?: string;
 }
 
+// Webhook tool for n8n integration
+export interface WebhookTool {
+  id: string;
+  name: string;           // e.g., "check_availability"
+  description: string;    // What this tool does
+  url: string;            // Full webhook URL
+  enabled: boolean;
+}
+
+// Predefined tool types that can be configured
+export type ToolType = 'check_history' | 'check_availability' | 'book_appointment';
+
 // API Keys stored separately in localStorage
 export interface APIKeys {
   openaiKey: string;
@@ -125,7 +137,8 @@ export interface APIKeys {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   calcomLink?: string;
-  webhookBaseUrl?: string;            // For n8n webhooks
+  // Webhook tools for n8n integration
+  webhookTools?: WebhookTool[];
 }
 
 // Complete app configuration
@@ -229,4 +242,6 @@ export interface AIGenerationResponse {
     appointment: string;
     service: string;
   };
+  // Comprehensive knowledge base entries
+  knowledgeBase: KnowledgeBaseEntry[];
 }

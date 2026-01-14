@@ -3,7 +3,7 @@
  * Creates agents programmatically using the template creator's API key
  */
 
-import type { BusinessConfig } from '../types';
+import type { BusinessConfig, WebhookTool } from '../types';
 
 // ElevenLabs API Configuration
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
@@ -21,7 +21,7 @@ export const VOICE_OPTIONS = {
 export interface CreateAgentParams {
   apiKey: string;
   config: BusinessConfig;
-  webhookUrl?: string;
+  webhookTools?: WebhookTool[];
 }
 
 export interface AgentResponse {
@@ -140,116 +140,174 @@ ${k.content}`).join('\n\n')}`);
 }
 
 /**
+ * Build webhook tools configuration for ElevenLabs agent
+ * Based on ElevenLabs API: api_schema is at tool level with url, method, request_body_schema
+ * Reference: https://elevenlabs.io/docs/agents-platform/api-reference/agents/create
+ *
+ * IMPORTANT: Field names must match exactly what n8n workflow expects!
+ */
+function buildWebhookTools(webhookTools: WebhookTool[], config: BusinessConfig): any[] {
+  const tools: any[] = [];
+
+  for (const tool of webhookTools) {
+    if (!tool.url || !tool.enabled) continue;
+
+    if (tool.id === 'check_history') {
+      tools.push({
+        type: 'webhook',
+        name: 'check_history',
+        description: `Check ${config.terms.customer} history and past ${config.terms.appointment}s from the database. Use this when the ${config.terms.customer} mentions they've visited before or to look up their records. Call this BEFORE booking to check if they're a returning ${config.terms.customer}.`,
+        api_schema: {
+          url: tool.url,
+          method: 'POST',
+          request_body_schema: {
+            type: 'object',
+            properties: {
+              email_address: {
+                type: 'string',
+                description: `Email address of the ${config.terms.customer}. Always ask for email to look up their history.`,
+              },
+              phone_number: {
+                type: 'string',
+                description: `Phone number of the ${config.terms.customer} (optional, can also be used for lookup)`,
+              },
+              patient_name: {
+                type: 'string',
+                description: `Full name of the ${config.terms.customer} (optional)`,
+              },
+            },
+            required: ['email_address'],
+          },
+        },
+      });
+    }
+
+    if (tool.id === 'check_availability') {
+      tools.push({
+        type: 'webhook',
+        name: 'check_availability',
+        description: `Check available time slots for scheduling ${config.terms.appointment}s. Use this when the ${config.terms.customer} wants to book and you need to find available times. Returns available dates and times.`,
+        api_schema: {
+          url: tool.url,
+          method: 'POST',
+          request_body_schema: {
+            type: 'object',
+            properties: {
+              preferred_date: {
+                type: 'string',
+                description: 'The date the customer wants to book (YYYY-MM-DD format, e.g., 2025-01-20)',
+              },
+              preferred_time: {
+                type: 'string',
+                description: 'The time the customer prefers (HH:MM in 24-hour format, e.g., 14:00 for 2 PM)',
+              },
+              service_type: {
+                type: 'string',
+                description: `Type of ${config.terms.service} the ${config.terms.customer} wants`,
+              },
+            },
+            required: ['preferred_date', 'preferred_time'],
+          },
+        },
+      });
+    }
+
+    if (tool.id === 'book_appointment') {
+      tools.push({
+        type: 'webhook',
+        name: 'book_appointment',
+        description: `Book, reschedule, or cancel a ${config.terms.appointment}. Use action_type to specify: "Book" for new ${config.terms.appointment}s, "Reschedule" to change existing ${config.terms.appointment}, "Cancel" to cancel. Always collect all required information before calling.`,
+        api_schema: {
+          url: tool.url,
+          method: 'POST',
+          request_body_schema: {
+            type: 'object',
+            properties: {
+              action_type: {
+                type: 'string',
+                description: 'The action to perform: "Book" for new appointment, "Reschedule" to change existing, "Cancel" to cancel. Default is "Book".',
+              },
+              patient_name: {
+                type: 'string',
+                description: `Full name of the ${config.terms.customer}`,
+              },
+              email_address: {
+                type: 'string',
+                description: `Email address of the ${config.terms.customer} for confirmation`,
+              },
+              phone_number: {
+                type: 'string',
+                description: `Phone number of the ${config.terms.customer}`,
+              },
+              appointment_date: {
+                type: 'string',
+                description: `${config.terms.appointment} date (YYYY-MM-DD format, e.g., 2025-01-20)`,
+              },
+              appointment_time: {
+                type: 'string',
+                description: `${config.terms.appointment} time (HH:MM in 24-hour format, e.g., 14:00)`,
+              },
+              primary_concern: {
+                type: 'string',
+                description: `The main reason for the ${config.terms.appointment} or ${config.terms.service} type requested`,
+              },
+              is_first_visit: {
+                type: 'boolean',
+                description: `Whether this is the ${config.terms.customer}'s first visit (true/false)`,
+              },
+              call_summary: {
+                type: 'string',
+                description: 'Brief summary of the conversation and any special requests or notes',
+              },
+            },
+            required: ['action_type', 'patient_name', 'email_address', 'appointment_date', 'appointment_time'],
+          },
+        },
+      });
+    }
+  }
+
+  return tools;
+}
+
+/**
  * Create an ElevenLabs Conversational AI Agent
+ * API Reference: https://elevenlabs.io/docs/agents-platform/api-reference/agents/create
  */
 export async function createAgent(params: CreateAgentParams): Promise<AgentResponse> {
-  const { apiKey, config, webhookUrl } = params;
+  const { apiKey, config, webhookTools } = params;
 
-  // Build the agent configuration
-  const agentConfig = {
+  // Build webhook tools if provided
+  const tools = webhookTools && webhookTools.length > 0
+    ? buildWebhookTools(webhookTools, config)
+    : [];
+
+  // Build the agent configuration (workflow is optional)
+  const agentConfig: any = {
     name: `${config.name} - ${config.voiceAgent.name}`,
     conversation_config: {
       agent: {
         prompt: {
           prompt: buildSystemPrompt(config),
+          llm: 'gpt-4o-mini', // Valid model for English agents
+          temperature: 0.7,
         },
         first_message: config.voiceAgent.firstMessage,
         language: 'en',
       },
-      asr: {
-        quality: 'high',
-        provider: 'elevenlabs',
-      },
       tts: {
         voice_id: getVoiceIdForPersonality(config.voiceAgent.personality),
-        model_id: 'eleven_turbo_v2_5',
-        agent_output_audio_format: 'pcm_16000',
+        model_id: 'eleven_turbo_v2', // Must be turbo or flash v2 for English
       },
       conversation: {
         max_duration_seconds: 600, // 10 minutes max
-        client_events: ['audio', 'interruption'],
-      },
-    },
-    platform_settings: {
-      widget: {
-        variant: 'compact',
-        avatar: {
-          type: 'orb',
-        },
       },
     },
   };
 
-  // Add webhook tools if URL provided
-  if (webhookUrl) {
-    (agentConfig.conversation_config.agent as any).tools = [
-      {
-        type: 'webhook',
-        name: 'check_availability',
-        description: `Check available time slots for scheduling ${config.terms.appointment}s`,
-        webhook: {
-          url: `${webhookUrl}/check-availability`,
-          method: 'POST',
-        },
-        parameters: {
-          type: 'object',
-          properties: {
-            date: {
-              type: 'string',
-              description: 'The date to check (YYYY-MM-DD format)',
-            },
-            service_type: {
-              type: 'string',
-              description: 'The type of service/appointment',
-            },
-          },
-          required: ['date'],
-        },
-      },
-      {
-        type: 'webhook',
-        name: 'book_appointment',
-        description: `Book a ${config.terms.appointment} for the ${config.terms.customer}`,
-        webhook: {
-          url: `${webhookUrl}/book-appointment`,
-          method: 'POST',
-        },
-        parameters: {
-          type: 'object',
-          properties: {
-            customer_name: {
-              type: 'string',
-              description: `Full name of the ${config.terms.customer}`,
-            },
-            customer_email: {
-              type: 'string',
-              description: 'Email address',
-            },
-            customer_phone: {
-              type: 'string',
-              description: 'Phone number',
-            },
-            date: {
-              type: 'string',
-              description: 'Appointment date (YYYY-MM-DD)',
-            },
-            time: {
-              type: 'string',
-              description: 'Appointment time (HH:MM)',
-            },
-            service_type: {
-              type: 'string',
-              description: `Type of ${config.terms.service}`,
-            },
-            notes: {
-              type: 'string',
-              description: 'Additional notes',
-            },
-          },
-          required: ['customer_name', 'customer_email', 'date', 'time', 'service_type'],
-        },
-      },
-    ];
+  // Add tools to prompt if any are configured
+  if (tools.length > 0) {
+    agentConfig.conversation_config.agent.prompt.tools = tools;
   }
 
   // Make the API call

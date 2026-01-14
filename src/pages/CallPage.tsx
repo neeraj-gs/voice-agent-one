@@ -1,11 +1,12 @@
 /**
  * Call Page
- * Dedicated voice agent calling interface
+ * Voice agent calling interface with ElevenLabs Conversational AI
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useConversation } from '@elevenlabs/react';
 import {
   Phone,
   PhoneOff,
@@ -17,36 +18,52 @@ import {
   Volume2,
   Loader2,
   Info,
+  AlertCircle,
 } from 'lucide-react';
 import { Button, Card, CardContent } from '../components/ui';
 import { useBusiness, useBranding, useAPIKeys } from '../stores/configStore';
 import { cn } from '../utils/cn';
-
-// ElevenLabs types (simplified for demo - in production use @elevenlabs/react)
-type ConversationStatus = 'idle' | 'connecting' | 'connected' | 'disconnecting';
 
 export const CallPage: React.FC = () => {
   const business = useBusiness();
   const branding = useBranding();
   const apiKeys = useAPIKeys();
 
-  const [status, setStatus] = useState<ConversationStatus>('idle');
-  const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  // ElevenLabs Conversation Hook
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to ElevenLabs');
+      setError(null);
+    },
+    onDisconnect: () => {
+      console.log('Disconnected from ElevenLabs');
+    },
+    onError: (err) => {
+      console.error('ElevenLabs error:', err);
+      setError(err.message || 'Connection error occurred');
+    },
+    onMessage: (message) => {
+      console.log('Message:', message);
+    },
+  });
+
   // Timer for call duration
-  React.useEffect(() => {
+  useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (status === 'connected') {
+    if (conversation.status === 'connected') {
       interval = setInterval(() => {
         setDuration((d) => d + 1);
       }, 1000);
+    } else {
+      setDuration(0);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [status]);
+  }, [conversation.status]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -60,41 +77,54 @@ export const CallPage: React.FC = () => {
       return;
     }
 
-    setStatus('connecting');
     setError(null);
-    setDuration(0);
 
     try {
-      // In production, use the ElevenLabs React SDK
-      // This is a simplified demo implementation
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // For demo purposes, we'll show the connected state
-      // In production, this would use the actual ElevenLabs widget/SDK
-      setStatus('connected');
+      // Start the conversation with the agent using WebRTC for audio
+      await conversation.startSession({
+        agentId: apiKeys.elevenLabsAgentId,
+        connectionType: 'webrtc', // Required for voice audio streaming
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect');
-      setStatus('idle');
+      console.error('Failed to start conversation:', err);
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setError('Microphone access denied. Please allow microphone access and try again.');
+        } else {
+          setError(err.message || 'Failed to start conversation');
+        }
+      } else {
+        setError('Failed to start conversation');
+      }
     }
-  }, [apiKeys]);
+  }, [apiKeys, conversation]);
 
-  const endConversation = useCallback(() => {
-    setStatus('disconnecting');
-    // Simulate disconnect
-    setTimeout(() => {
-      setStatus('idle');
-    }, 500);
-  }, []);
+  const endConversation = useCallback(async () => {
+    try {
+      await conversation.endSession();
+    } catch (err) {
+      console.error('Failed to end conversation:', err);
+    }
+  }, [conversation]);
 
-  const toggleMute = () => {
-    setIsMuted((m) => !m);
-  };
+  const toggleMute = useCallback(() => {
+    if (conversation.isSpeaking) {
+      // Can't mute while agent is speaking
+      return;
+    }
+    // Toggle microphone mute (ElevenLabs SDK handles this internally)
+  }, [conversation.isSpeaking]);
 
   if (!business || !branding) {
     return null;
   }
+
+  const isConnected = conversation.status === 'connected';
+  const isConnecting = conversation.status === 'connecting';
+  const isIdle = conversation.status === 'disconnected';
 
   return (
     <div
@@ -107,7 +137,7 @@ export const CallPage: React.FC = () => {
       <header className="border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+            <Link to="/site" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
               <ArrowLeft size={20} />
               <span>Back to {business.name}</span>
             </Link>
@@ -132,20 +162,20 @@ export const CallPage: React.FC = () => {
               className={cn(
                 'w-24 h-24 rounded-full flex items-center justify-center mx-auto',
                 'transition-all duration-300',
-                status === 'connected' ? 'animate-pulse' : ''
+                isConnected ? 'animate-pulse' : ''
               )}
               style={{
                 backgroundColor:
-                  status === 'connected'
+                  isConnected
                     ? branding.accentColor || '#22c55e'
-                    : status === 'connecting'
+                    : isConnecting
                     ? branding.primaryColor
                     : `${branding.primaryColor}20`,
               }}
             >
-              {status === 'connecting' ? (
+              {isConnecting ? (
                 <Loader2 size={40} className="text-white animate-spin" />
-              ) : status === 'connected' ? (
+              ) : isConnected ? (
                 <Volume2 size={40} className="text-white" />
               ) : (
                 <MessageSquare size={40} style={{ color: branding.primaryColor }} />
@@ -154,24 +184,40 @@ export const CallPage: React.FC = () => {
           </motion.div>
 
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {status === 'connected'
+            {isConnected
               ? `Speaking with ${business.voiceAgent.name}`
-              : status === 'connecting'
+              : isConnecting
               ? 'Connecting...'
               : `Talk to ${business.voiceAgent.name}`}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {status === 'connected'
+            {isConnected
               ? business.voiceAgent.personality
               : `Your ${business.voiceAgent.personality} AI assistant for ${business.name}`}
           </p>
 
           {/* Duration */}
-          {status === 'connected' && (
+          {isConnected && (
             <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
               <Clock size={16} />
               <span>{formatDuration(duration)}</span>
             </div>
+          )}
+
+          {/* Agent Speaking Indicator */}
+          {isConnected && conversation.isSpeaking && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 flex items-center justify-center gap-2 text-green-600"
+            >
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-sm font-medium">{business.voiceAgent.name} is speaking...</span>
+            </motion.div>
           )}
         </div>
 
@@ -182,21 +228,22 @@ export const CallPage: React.FC = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-center"
+              className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 flex items-center gap-3"
             >
-              {error}
+              <AlertCircle size={20} />
+              <span>{error}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Call Controls */}
         <div className="flex justify-center gap-4 mb-12">
-          {status === 'idle' || status === 'disconnecting' ? (
+          {isIdle ? (
             <Button
               size="lg"
               onClick={startConversation}
-              disabled={status === 'disconnecting'}
               className="px-8"
+              style={{ backgroundColor: branding.primaryColor }}
             >
               <Phone size={20} className="mr-2" />
               Start Conversation
@@ -204,12 +251,13 @@ export const CallPage: React.FC = () => {
           ) : (
             <>
               <Button
-                variant={isMuted ? 'secondary' : 'outline'}
+                variant="outline"
                 size="lg"
                 onClick={toggleMute}
                 className="w-14 h-14 rounded-full p-0"
+                disabled={conversation.isSpeaking}
               >
-                {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                <Mic size={24} />
               </Button>
               <Button
                 size="lg"
@@ -311,7 +359,7 @@ export const CallPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {business.name}
+                    {business.staff.name}
                   </h3>
                   <p className="text-sm text-gray-500">{business.staff.title}</p>
                 </div>
@@ -333,11 +381,17 @@ export const CallPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* ElevenLabs Widget Note */}
-        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-center">
-          <p className="text-sm text-blue-600 dark:text-blue-400">
-            <strong>Note:</strong> In production, this page integrates with ElevenLabs
-            Conversational AI using Agent ID: <code className="px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded">{apiKeys?.elevenLabsAgentId || 'Not configured'}</code>
+        {/* Connection Status */}
+        <div className="mt-8 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Agent ID: <code className="px-2 py-1 bg-gray-200 dark:bg-slate-700 rounded text-xs">{apiKeys?.elevenLabsAgentId || 'Not configured'}</code>
+            <span className="mx-2">•</span>
+            Status: <span className={cn(
+              'font-medium',
+              isConnected ? 'text-green-600' : isConnecting ? 'text-yellow-600' : 'text-gray-600'
+            )}>
+              {conversation.status}
+            </span>
           </p>
         </div>
       </main>
