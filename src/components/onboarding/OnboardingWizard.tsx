@@ -104,6 +104,8 @@ import {
 import { Button, Input, Card, CardContent } from '../ui';
 import { ConfigEditor } from './ConfigEditor';
 import { useConfigStore } from '../../stores/configStore';
+import { useBusinessStore } from '../../stores/businessStore';
+import { useAuthStore } from '../../stores/authStore';
 import { generateBusinessContent, validateOpenAIKey } from '../../services/openai';
 import type { IndustryType, BusinessInfo, APIKeys, BusinessConfig, WebhookTool } from '../../types';
 import { cn } from '../../utils/cn';
@@ -252,6 +254,8 @@ const STEPS = [
 export const OnboardingWizard: React.FC = () => {
   const navigate = useNavigate();
   const { setBusinessConfig, setAPIKeys, completeSetup } = useConfigStore();
+  const { addBusiness, saveVoiceAgent } = useBusinessStore();
+  const { user } = useAuthStore();
 
   const [step, setStep] = useState(1);
   const [industry, setIndustry] = useState<IndustryType | null>(null);
@@ -395,21 +399,21 @@ export const OnboardingWizard: React.FC = () => {
   const [agentCreationError, setAgentCreationError] = useState<string | null>(null);
 
   const handleComplete = async () => {
-    if (!generatedConfig || !apiKeys.openaiKey) return;
+    if (!generatedConfig || !apiKeys.openaiKey || !user) return;
 
     // Check if we need to create an agent (using auto-create mode with API key)
     const needsAgentCreation = useAutoCreate && apiKeys.elevenLabsApiKey;
 
-    if (needsAgentCreation) {
-      setIsCreatingAgent(true);
-      setAgentCreationError(null);
+    setIsCreatingAgent(true);
+    setAgentCreationError(null);
 
+    let agentId = apiKeys.elevenLabsAgentId || '';
+    const enabledTools = webhookTools.filter((t) => t.url);
+
+    if (needsAgentCreation) {
       try {
         // Dynamically import to avoid bundling issues
         const { createAgent, addKnowledgeBase } = await import('../../services/elevenlabs');
-
-        // Get enabled webhook tools (ones with URLs)
-        const enabledTools = webhookTools.filter((t) => t.url);
 
         // Create the agent with tools
         const agentResponse = await createAgent({
@@ -418,26 +422,14 @@ export const OnboardingWizard: React.FC = () => {
           webhookTools: enabledTools,
         });
 
+        agentId = agentResponse.agent_id;
+
         // Try to add knowledge base (non-critical if it fails)
         try {
-          await addKnowledgeBase(apiKeys.elevenLabsApiKey!, agentResponse.agent_id, generatedConfig);
+          await addKnowledgeBase(apiKeys.elevenLabsApiKey!, agentId, generatedConfig);
         } catch (kbError) {
           console.warn('Failed to add knowledge base:', kbError);
         }
-
-        // Save with the new agent ID and webhook tools
-        setBusinessConfig(generatedConfig);
-        setAPIKeys({
-          openaiKey: apiKeys.openaiKey,
-          elevenLabsAgentId: agentResponse.agent_id,
-          elevenLabsApiKey: apiKeys.elevenLabsApiKey,
-          supabaseUrl: apiKeys.supabaseUrl,
-          supabaseAnonKey: apiKeys.supabaseAnonKey,
-          calcomLink: apiKeys.calcomLink,
-          webhookTools: enabledTools,
-        });
-        completeSetup();
-        navigate('/site');
       } catch (err) {
         console.error('Failed to create agent:', err);
         setAgentCreationError(
@@ -446,20 +438,66 @@ export const OnboardingWizard: React.FC = () => {
         setIsCreatingAgent(false);
         return;
       }
-    } else {
-      // Using existing agent ID
-      if (!apiKeys.elevenLabsAgentId) return;
+    }
 
+    // Using existing agent ID
+    if (!agentId) {
+      setAgentCreationError('No agent ID available. Please provide an ElevenLabs Agent ID or use Auto-Create mode.');
+      setIsCreatingAgent(false);
+      return;
+    }
+
+    try {
+      // Save business to Supabase
+      const { businessId, error: businessError } = await addBusiness(user.id, generatedConfig);
+
+      if (businessError || !businessId) {
+        throw new Error(businessError || 'Failed to create business');
+      }
+
+      // Save voice agent to Supabase
+      const voiceAgentData = {
+        elevenlabs_agent_id: agentId,
+        name: generatedConfig.voiceAgent?.name || `${generatedConfig.name} Assistant`,
+        personality: generatedConfig.voiceAgent?.personality || '',
+        system_prompt: generatedConfig.voiceAgent?.systemPrompt || '',
+        first_message: generatedConfig.voiceAgent?.firstMessage || '',
+        openai_key: apiKeys.openaiKey,
+        elevenlabs_api_key: apiKeys.elevenLabsApiKey || null,
+        supabase_url: apiKeys.supabaseUrl || null,
+        supabase_anon_key: apiKeys.supabaseAnonKey || null,
+        calcom_link: apiKeys.calcomLink || null,
+        webhook_tools: enabledTools.length > 0 ? enabledTools : [],
+      };
+
+      const { error: agentError } = await saveVoiceAgent(businessId, voiceAgentData);
+
+      if (agentError) {
+        console.warn('Failed to save voice agent to database:', agentError);
+        // Continue anyway - the business was created
+      }
+
+      // Also save to localStorage for backward compatibility
       setBusinessConfig(generatedConfig);
       setAPIKeys({
         openaiKey: apiKeys.openaiKey,
-        elevenLabsAgentId: apiKeys.elevenLabsAgentId,
+        elevenLabsAgentId: agentId,
+        elevenLabsApiKey: apiKeys.elevenLabsApiKey,
         supabaseUrl: apiKeys.supabaseUrl,
         supabaseAnonKey: apiKeys.supabaseAnonKey,
         calcomLink: apiKeys.calcomLink,
+        webhookTools: enabledTools,
       });
       completeSetup();
+
+      // Navigate to site page with new business
       navigate('/site');
+    } catch (err) {
+      console.error('Failed to save business:', err);
+      setAgentCreationError(
+        err instanceof Error ? err.message : 'Failed to save business. Please try again.'
+      );
+      setIsCreatingAgent(false);
     }
   };
 

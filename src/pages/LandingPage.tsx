@@ -17,13 +17,19 @@ import {
   Calendar,
   Check,
   ArrowRight,
+  LayoutDashboard,
+  Settings,
+  Building2,
+  BarChart3,
 } from 'lucide-react';
 import { Button, Card, CardContent } from '../components/ui';
 import { useBusiness, useBranding } from '../stores/configStore';
+import { useIsAuthenticated } from '../stores/authStore';
 
 export const LandingPage: React.FC = () => {
   const business = useBusiness();
   const branding = useBranding();
+  const isAuthenticated = useIsAuthenticated();
 
   if (!business || !branding) {
     return null;
@@ -31,8 +37,45 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900">
+      {/* Admin Bar - Only visible to logged-in users */}
+      {isAuthenticated && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-slate-900 border-b border-slate-700">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center justify-between h-10">
+              <div className="flex items-center gap-1 text-xs text-slate-400">
+                <span>Admin:</span>
+                <span className="text-white font-medium">{business.name}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Link
+                  to="/businesses"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                >
+                  <Building2 size={14} />
+                  <span className="hidden sm:inline">My Businesses</span>
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                >
+                  <BarChart3 size={14} />
+                  <span className="hidden sm:inline">Analytics</span>
+                </Link>
+                <Link
+                  to="/settings/agent"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                >
+                  <Settings size={14} />
+                  <span className="hidden sm:inline">Settings</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700">
+      <nav className={`fixed left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 ${isAuthenticated ? 'top-10' : 'top-0'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
@@ -73,7 +116,7 @@ export const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className={`pb-20 px-4 ${isAuthenticated ? 'pt-40' : 'pt-32'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div

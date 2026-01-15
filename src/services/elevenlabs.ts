@@ -343,30 +343,53 @@ export async function updateAgent(
   agentId: string,
   config: BusinessConfig
 ): Promise<AgentResponse> {
+  // Build the system prompt - use custom if provided, otherwise build from config
+  const systemPrompt = config.voiceAgent.systemPrompt || buildSystemPrompt(config);
+
+  // Build the first message
+  const firstMessage = config.voiceAgent.firstMessage || '';
+
+  // Agent name for ElevenLabs
+  const agentDisplayName = config.voiceAgent.name
+    ? `${config.name} - ${config.voiceAgent.name}`
+    : config.name;
+
+  const requestBody = {
+    name: agentDisplayName,
+    conversation_config: {
+      agent: {
+        prompt: {
+          prompt: systemPrompt,
+        },
+        first_message: firstMessage,
+      },
+    },
+  };
+
+  console.log('ElevenLabs Update Request:', {
+    agentId,
+    name: requestBody.name,
+    firstMessage: firstMessage.substring(0, 50) + '...',
+    promptLength: systemPrompt.length,
+  });
+
   const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents/${agentId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       'xi-api-key': apiKey,
     },
-    body: JSON.stringify({
-      name: `${config.name} - ${config.voiceAgent.name}`,
-      conversation_config: {
-        agent: {
-          prompt: {
-            prompt: buildSystemPrompt(config),
-          },
-          first_message: config.voiceAgent.firstMessage,
-        },
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update agent: ${response.status}`);
+    const errorText = await response.text();
+    console.error('ElevenLabs Update Error:', response.status, errorText);
+    throw new Error(`Failed to update agent: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('ElevenLabs Update Success:', data);
 
   return {
     agent_id: data.agent_id,
