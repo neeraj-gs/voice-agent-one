@@ -13,6 +13,8 @@ import {
   SetupPage,
   MyBusinessesPage,
   VoiceAgentSettingsPage,
+  PublicLandingPage,
+  PublicCallPage,
 } from './pages';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignupPage } from './components/auth/SignupPage';
@@ -97,6 +99,10 @@ const App: React.FC = () => {
           <Route path="/template" element={<TemplateLandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+
+          {/* Public business pages - no auth required */}
+          <Route path="/p/:slug" element={<PublicLandingPage />} />
+          <Route path="/p/:slug/call" element={<PublicCallPage />} />
 
           {/* Setup wizard - requires auth */}
           <Route

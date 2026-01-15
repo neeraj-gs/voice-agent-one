@@ -1,11 +1,12 @@
 /**
- * Landing Page
- * Dynamic business website powered by stored configuration
+ * Public Landing Page
+ * Public-facing business website accessible via unique slug URL
+ * No authentication required - no admin bar
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Phone,
   Mail,
@@ -17,161 +18,96 @@ import {
   Calendar,
   Check,
   ArrowRight,
-  LayoutDashboard,
-  Settings,
-  Building2,
-  BarChart3,
-  Share2,
-  Copy,
-  ExternalLink,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { Button, Card, CardContent } from '../components/ui';
-import { useBusiness, useBranding } from '../stores/configStore';
-import { useIsAuthenticated } from '../stores/authStore';
-import { useActiveBusiness } from '../stores/businessStore';
+import { getPublicBusinessData, businessToConfig } from '../services/database';
+import type { Business, VoiceAgent } from '../lib/supabase';
+import type { BusinessConfig } from '../types';
 
-export const LandingPage: React.FC = () => {
-  const business = useBusiness();
-  const branding = useBranding();
-  const isAuthenticated = useIsAuthenticated();
-  const activeBusiness = useActiveBusiness();
+export const PublicLandingPage: React.FC = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [voiceAgent, setVoiceAgent] = useState<VoiceAgent | null>(null);
+  const [config, setConfig] = useState<BusinessConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [showShareMenu, setShowShareMenu] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const shareMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close share menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
-        setShowShareMenu(false);
+    const loadBusinessData = async () => {
+      if (!slug) {
+        setError('Invalid URL');
+        setIsLoading(false);
+        return;
       }
+
+      setIsLoading(true);
+      const { data, error: fetchError } = await getPublicBusinessData(slug);
+
+      if (fetchError || !data) {
+        setError(fetchError || 'Business not found');
+        setIsLoading(false);
+        return;
+      }
+
+      setBusiness(data.business);
+      setVoiceAgent(data.voiceAgent);
+
+      // Convert to config format
+      const businessConfig = businessToConfig(data.business);
+      // Add voice agent info to config
+      if (data.voiceAgent) {
+        businessConfig.voiceAgent = {
+          name: data.voiceAgent.name,
+          personality: data.voiceAgent.personality || '',
+          systemPrompt: data.voiceAgent.system_prompt || '',
+          firstMessage: data.voiceAgent.first_message || '',
+        };
+      }
+      setConfig(businessConfig);
+      setIsLoading(false);
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    loadBusinessData();
+  }, [slug]);
 
-  // Get the public URL using the business slug
-  const publicUrl = activeBusiness?.slug
-    ? `${window.location.origin}/p/${activeBusiness.slug}`
-    : null;
-
-  const copyToClipboard = async () => {
-    if (publicUrl) {
-      try {
-        await navigator.clipboard.writeText(publicUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-    }
-  };
-
-  const openPublicPage = () => {
-    if (publicUrl) {
-      window.open(publicUrl, '_blank');
-    }
-  };
-
-  if (!business || !branding) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
   }
+
+  if (error || !config || !business) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Business Not Found
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {error || 'The business you are looking for does not exist.'}
+          </p>
+          <Link to="/">
+            <Button>Go to Homepage</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const branding = config.branding;
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900">
-      {/* Admin Bar - Only visible to logged-in users */}
-      {isAuthenticated && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-slate-900 border-b border-slate-700">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center justify-between h-10">
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <span>Admin:</span>
-                <span className="text-white font-medium">{business.name}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Share Button */}
-                {publicUrl && (
-                  <div className="relative" ref={shareMenuRef}>
-                    <button
-                      onClick={() => setShowShareMenu(!showShareMenu)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-400 hover:text-green-300 hover:bg-slate-800 rounded-md transition-colors"
-                    >
-                      <Share2 size={14} />
-                      <span className="hidden sm:inline">Share</span>
-                    </button>
-
-                    {/* Share Dropdown */}
-                    <AnimatePresence>
-                      {showShareMenu && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute right-0 top-full mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-50"
-                        >
-                          <div className="p-3 border-b border-slate-700">
-                            <p className="text-xs text-slate-400 mb-2">Public URL</p>
-                            <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-lg">
-                              <input
-                                type="text"
-                                readOnly
-                                value={publicUrl}
-                                className="flex-1 bg-transparent text-xs text-white outline-none"
-                              />
-                            </div>
-                          </div>
-                          <div className="p-2 flex gap-2">
-                            <button
-                              onClick={copyToClipboard}
-                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-xs font-medium transition-colors"
-                            >
-                              <Copy size={14} />
-                              {copied ? 'Copied!' : 'Copy Link'}
-                            </button>
-                            <button
-                              onClick={openPublicPage}
-                              className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-xs font-medium transition-colors"
-                            >
-                              <ExternalLink size={14} />
-                              Open
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-                <Link
-                  to="/businesses"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-                >
-                  <Building2 size={14} />
-                  <span className="hidden sm:inline">My Businesses</span>
-                </Link>
-                <Link
-                  to="/dashboard"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-                >
-                  <BarChart3 size={14} />
-                  <span className="hidden sm:inline">Analytics</span>
-                </Link>
-                <Link
-                  to="/settings/agent"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-                >
-                  <Settings size={14} />
-                  <span className="hidden sm:inline">Settings</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation */}
-      <nav className={`fixed left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 ${isAuthenticated ? 'top-10' : 'top-0'}`}>
+      {/* Navigation - No admin bar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
@@ -179,10 +115,10 @@ export const LandingPage: React.FC = () => {
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: branding.primaryColor }}
               >
-                {business.name.charAt(0)}
+                {config.name.charAt(0)}
               </div>
               <span className="font-bold text-gray-900 dark:text-white">
-                {business.name}
+                {config.name}
               </span>
             </div>
             <div className="hidden md:flex items-center gap-8">
@@ -200,7 +136,7 @@ export const LandingPage: React.FC = () => {
               </a>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/call">
+              <Link to={`/p/${slug}/call`}>
                 <Button size="sm">
                   <Phone size={16} className="mr-2" />
                   Talk to AI
@@ -212,7 +148,7 @@ export const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className={`pb-20 px-4 ${isAuthenticated ? 'pt-40' : 'pt-32'}`}>
+      <section className="pt-32 pb-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -231,13 +167,13 @@ export const LandingPage: React.FC = () => {
                 24/7 AI Assistant Available
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-                {business.tagline}
+                {config.tagline}
               </h1>
               <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
-                {business.description}
+                {config.description}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/call">
+                <Link to={`/p/${slug}/call`}>
                   <Button size="lg" className="w-full sm:w-auto">
                     <Phone size={20} className="mr-2" />
                     Talk to Our AI Assistant
@@ -263,7 +199,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white">500+</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Happy {business.terms.customer}s</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Happy {config.terms.customer}s</div>
                 </div>
               </div>
             </motion.div>
@@ -285,16 +221,16 @@ export const LandingPage: React.FC = () => {
                   <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Phone size={40} className="text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">Speak with {business.voiceAgent.name}</h3>
+                  <h3 className="text-2xl font-bold mb-2">Speak with {config.voiceAgent.name || 'Our AI'}</h3>
                   <p className="text-white/80">
-                    Our AI assistant is ready to help you schedule your {business.terms.appointment}
+                    Our AI assistant is ready to help you schedule your {config.terms.appointment}
                   </p>
                 </div>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3">
                     <Check className="w-5 h-5" />
-                    <span>Book {business.terms.appointment}s instantly</span>
+                    <span>Book {config.terms.appointment}s instantly</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Check className="w-5 h-5" />
@@ -306,7 +242,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                <Link to="/call">
+                <Link to={`/p/${slug}/call`}>
                   <button className="w-full py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
                     <Phone size={20} />
                     Start Conversation
@@ -327,14 +263,14 @@ export const LandingPage: React.FC = () => {
               Our Services
             </h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Professional {business.terms.service}s tailored to your needs
+              Professional {config.terms.service}s tailored to your needs
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {business.services.map((service, index) => (
+            {config.services.map((service, index) => (
               <motion.div
-                key={service.id}
+                key={service.id || index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -374,10 +310,10 @@ export const LandingPage: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                About {business.name}
+                About {config.name}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {business.description}
+                {config.description}
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
@@ -390,8 +326,8 @@ export const LandingPage: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">Location</h4>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {business.address.street && `${business.address.street}, `}
-                      {business.address.city}, {business.address.state} {business.address.zip}
+                      {config.address.street && `${config.address.street}, `}
+                      {config.address.city}, {config.address.state} {config.address.zip}
                     </p>
                   </div>
                 </div>
@@ -405,9 +341,9 @@ export const LandingPage: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">Hours</h4>
                     <p className="text-gray-600 dark:text-gray-400">
-                      Mon-Fri: {business.hours.weekdays}<br />
-                      Sat: {business.hours.saturday}<br />
-                      Sun: {business.hours.sunday}
+                      Mon-Fri: {config.hours.weekdays}<br />
+                      Sat: {config.hours.saturday}<br />
+                      Sun: {config.hours.sunday}
                     </p>
                   </div>
                 </div>
@@ -421,8 +357,8 @@ export const LandingPage: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">Contact</h4>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {business.phone}<br />
-                      {business.email}
+                      {config.phone}<br />
+                      {config.email}
                     </p>
                   </div>
                 </div>
@@ -437,17 +373,17 @@ export const LandingPage: React.FC = () => {
                     className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold"
                     style={{ backgroundColor: branding.primaryColor }}
                   >
-                    {business.staff.name.charAt(0)}
+                    {config.staff.name.charAt(0)}
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {business.staff.name}
+                      {config.staff.name}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400">{business.staff.title}</p>
+                    <p className="text-gray-600 dark:text-gray-400">{config.staff.title}</p>
                   </div>
                 </div>
-                {business.staff.bio && (
-                  <p className="text-gray-600 dark:text-gray-400">{business.staff.bio}</p>
+                {config.staff.bio && (
+                  <p className="text-gray-600 dark:text-gray-400">{config.staff.bio}</p>
                 )}
               </CardContent>
             </Card>
@@ -456,17 +392,17 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Testimonials Section */}
-      {business.testimonials.length > 0 && (
+      {config.testimonials.length > 0 && (
         <section id="testimonials" className="py-20 px-4 bg-gray-50 dark:bg-slate-800/50">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                What Our {business.terms.customer.charAt(0).toUpperCase() + business.terms.customer.slice(1)}s Say
+                What Our {config.terms.customer.charAt(0).toUpperCase() + config.terms.customer.slice(1)}s Say
               </h2>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {business.testimonials.map((testimonial, index) => (
+              {config.testimonials.map((testimonial, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -512,28 +448,30 @@ export const LandingPage: React.FC = () => {
       )}
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Frequently Asked Questions
-            </h2>
-          </div>
+      {config.faqs.length > 0 && (
+        <section id="faq" className="py-20 px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Frequently Asked Questions
+              </h2>
+            </div>
 
-          <div className="space-y-4">
-            {business.faqs.map((faq, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    {faq.question}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">{faq.answer}</p>
-                </CardContent>
-              </Card>
-            ))}
+            <div className="space-y-4">
+              {config.faqs.map((faq, index) => (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      {faq.question}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-20 px-4">
@@ -548,13 +486,13 @@ export const LandingPage: React.FC = () => {
               Ready to Get Started?
             </h2>
             <p className="text-white/80 mb-8 max-w-xl mx-auto">
-              Speak with our AI assistant now to schedule your {business.terms.appointment}
+              Speak with our AI assistant now to schedule your {config.terms.appointment}
               or get answers to your questions.
             </p>
-            <Link to="/call">
+            <Link to={`/p/${slug}/call`}>
               <button className="px-8 py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition-colors inline-flex items-center gap-2">
                 <Phone size={20} />
-                Talk to {business.voiceAgent.name}
+                Talk to {config.voiceAgent.name || 'Our AI'}
                 <ArrowRight size={20} />
               </button>
             </Link>
@@ -571,28 +509,18 @@ export const LandingPage: React.FC = () => {
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: branding.primaryColor }}
               >
-                {business.name.charAt(0)}
+                {config.name.charAt(0)}
               </div>
               <span className="font-bold text-gray-900 dark:text-white">
-                {business.name}
+                {config.name}
               </span>
             </div>
             <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} {business.name}. All rights reserved.
+              © {new Date().getFullYear()} {config.name}. All rights reserved.
             </p>
-            <div className="flex items-center gap-4">
-              <Link
-                to="/dashboard"
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm"
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/setup"
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm"
-              >
-                Settings
-              </Link>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <span>{config.phone}</span>
+              <span>{config.email}</span>
             </div>
           </div>
         </div>
@@ -600,3 +528,5 @@ export const LandingPage: React.FC = () => {
     </div>
   );
 };
+
+export default PublicLandingPage;

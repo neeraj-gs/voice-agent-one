@@ -16,6 +16,8 @@ import {
   Loader2,
   AlertTriangle,
   BarChart3,
+  Link2,
+  Check,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useAuthStore, useUser } from '../stores/authStore';
@@ -40,6 +42,19 @@ export const MyBusinessesPage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Copy public URL to clipboard
+  const copyPublicUrl = async (businessId: string, slug: string) => {
+    const publicUrl = `${window.location.origin}/p/${slug}`;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedId(businessId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -193,16 +208,33 @@ export const MyBusinessesPage: React.FC = () => {
                       <Globe size={16} />
                       View Site
                     </button>
+                    {/* Copy Public Link */}
+                    {business.slug && (
+                      <button
+                        onClick={() => copyPublicUrl(business.id, business.slug)}
+                        className={cn(
+                          'p-2.5 rounded-lg transition-colors',
+                          copiedId === business.id
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-slate-700 hover:bg-green-500/20 text-slate-300 hover:text-green-400'
+                        )}
+                        title="Copy public link"
+                      >
+                        {copiedId === business.id ? <Check size={18} /> : <Link2 size={18} />}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleOpenSettings(business.id)}
                       disabled={isSwitching}
                       className="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                      title="Settings"
                     >
                       <Settings size={18} />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(business.id)}
                       className="p-2.5 bg-slate-700 hover:bg-red-500/20 rounded-lg text-slate-300 hover:text-red-400 transition-colors"
+                      title="Delete"
                     >
                       <Trash2 size={18} />
                     </button>

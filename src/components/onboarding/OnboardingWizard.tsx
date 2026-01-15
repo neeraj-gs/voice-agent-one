@@ -455,19 +455,19 @@ export const OnboardingWizard: React.FC = () => {
         throw new Error(businessError || 'Failed to create business');
       }
 
-      // Save voice agent to Supabase
+      // Save voice agent to Supabase (use camelCase to match database service)
       const voiceAgentData = {
-        elevenlabs_agent_id: agentId,
+        elevenlabsAgentId: agentId,
         name: generatedConfig.voiceAgent?.name || `${generatedConfig.name} Assistant`,
         personality: generatedConfig.voiceAgent?.personality || '',
-        system_prompt: generatedConfig.voiceAgent?.systemPrompt || '',
-        first_message: generatedConfig.voiceAgent?.firstMessage || '',
-        openai_key: apiKeys.openaiKey,
-        elevenlabs_api_key: apiKeys.elevenLabsApiKey || null,
-        supabase_url: apiKeys.supabaseUrl || null,
-        supabase_anon_key: apiKeys.supabaseAnonKey || null,
-        calcom_link: apiKeys.calcomLink || null,
-        webhook_tools: enabledTools.length > 0 ? enabledTools : [],
+        systemPrompt: generatedConfig.voiceAgent?.systemPrompt || '',
+        firstMessage: generatedConfig.voiceAgent?.firstMessage || '',
+        openaiKey: apiKeys.openaiKey,
+        elevenlabsApiKey: apiKeys.elevenLabsApiKey || undefined,
+        supabaseUrl: apiKeys.supabaseUrl || undefined,
+        supabaseAnonKey: apiKeys.supabaseAnonKey || undefined,
+        calcomLink: apiKeys.calcomLink || undefined,
+        webhookTools: enabledTools.length > 0 ? enabledTools : [],
       };
 
       const { error: agentError } = await saveVoiceAgent(businessId, voiceAgentData);

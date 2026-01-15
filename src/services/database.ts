@@ -7,6 +7,54 @@ import { supabase, Business, VoiceAgent, UserPreferences } from '../lib/supabase
 import type { BusinessConfig } from '../types';
 
 // ============================================
+// HELPER: SLUG GENERATION
+// ============================================
+
+/**
+ * Generate a URL-friendly slug from a business name
+ */
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/-+/g, '-')      // Replace multiple hyphens with single
+    .substring(0, 50);        // Limit length
+}
+
+/**
+ * Generate a unique slug by appending a number if needed
+ */
+export async function generateUniqueSlug(name: string): Promise<string> {
+  const baseSlug = generateSlug(name);
+  let slug = baseSlug;
+  let counter = 1;
+
+  // Check if slug exists, append number if it does
+  while (true) {
+    const { data } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+
+    if (!data) break; // Slug is unique
+
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+
+    if (counter > 100) {
+      // Fallback: append random string
+      slug = `${baseSlug}-${Date.now().toString(36)}`;
+      break;
+    }
+  }
+
+  return slug;
+}
+
+// ============================================
 // BUSINESS OPERATIONS
 // ============================================
 
@@ -18,11 +66,15 @@ export async function createBusiness(
   config: BusinessConfig
 ): Promise<{ data: Business | null; error: string | null }> {
   try {
+    // Generate unique slug from business name
+    const slug = await generateUniqueSlug(config.name);
+
     const { data, error } = await supabase
       .from('businesses')
       .insert({
         user_id: userId,
         name: config.name,
+        slug,
         tagline: config.tagline,
         description: config.description,
         industry: config.industry,
@@ -101,6 +153,106 @@ export async function getBusiness(
   } catch (error) {
     console.error('Error fetching business:', error);
     return { data: null, error: error instanceof Error ? error.message : 'Failed to fetch business' };
+  }
+}
+
+/**
+ * Get a business by slug (PUBLIC - no auth required)
+ * Used for public landing pages
+ */
+export async function getBusinessBySlug(
+  slug: string
+): Promise<{ data: Business | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching business by slug:', error);
+    return { data: null, error: error instanceof Error ? error.message : 'Business not found' };
+  }
+}
+
+/**
+ * Get public business data by slug (includes voice agent info)
+ * This is the main function for public landing pages
+ */
+export async function getPublicBusinessData(
+  slug: string
+): Promise<{
+  data: { business: Business; voiceAgent: VoiceAgent | null } | null;
+  error: string | null;
+}> {
+  try {
+    console.log('getPublicBusinessData: Fetching business with slug:', slug);
+
+    // Get business by slug
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    console.log('getPublicBusinessData: Business result:', {
+      found: !!business,
+      businessId: business?.id,
+      error: businessError,
+    });
+
+    if (businessError) throw businessError;
+    if (!business) throw new Error('Business not found');
+
+    // Get associated voice agent - use maybeSingle to avoid error if not found
+    const { data: voiceAgent, error: voiceAgentError } = await supabase
+      .from('voice_agents')
+      .select('*')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    console.log('getPublicBusinessData: Voice agent result:', {
+      found: !!voiceAgent,
+      agentId: voiceAgent?.elevenlabs_agent_id,
+      voiceAgentData: voiceAgent,
+      error: voiceAgentError,
+    });
+
+    // If still no voice agent, try without is_active filter (in case it's not set)
+    if (!voiceAgent && !voiceAgentError) {
+      console.log('getPublicBusinessData: Trying without is_active filter...');
+      const { data: voiceAgentAny } = await supabase
+        .from('voice_agents')
+        .select('*')
+        .eq('business_id', business.id)
+        .maybeSingle();
+
+      if (voiceAgentAny) {
+        console.log('getPublicBusinessData: Found voice agent without is_active filter:', voiceAgentAny.elevenlabs_agent_id);
+        return {
+          data: {
+            business,
+            voiceAgent: voiceAgentAny,
+          },
+          error: null,
+        };
+      }
+    }
+
+    return {
+      data: {
+        business,
+        voiceAgent: voiceAgent || null,
+      },
+      error: null,
+    };
+  } catch (error) {
+    console.error('Error fetching public business data:', error);
+    return { data: null, error: error instanceof Error ? error.message : 'Business not found' };
   }
 }
 

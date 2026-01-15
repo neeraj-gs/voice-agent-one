@@ -40,6 +40,7 @@ export interface Business {
   id: string;
   user_id: string;
   name: string;
+  slug: string;
   tagline: string | null;
   description: string | null;
   industry: string;

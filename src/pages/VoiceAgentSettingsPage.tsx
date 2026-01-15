@@ -283,6 +283,22 @@ export const VoiceAgentSettingsPage: React.FC = () => {
         knowledgeBase: localBusiness?.knowledgeBase || activeBusiness?.knowledge_base || [],
       };
 
+      // IMPORTANT: Always override voiceAgent with current form values
+      // This ensures the form values are used even if getActiveBusinessConfig() returns stale data
+      config.voiceAgent = {
+        name: agentName,
+        personality,
+        systemPrompt,
+        firstMessage,
+      };
+
+      console.log('Config voiceAgent being sent:', {
+        name: config.voiceAgent.name,
+        personality: config.voiceAgent.personality,
+        firstMessage: config.voiceAgent.firstMessage,
+        systemPromptLength: config.voiceAgent.systemPrompt?.length,
+      });
+
       // Update ElevenLabs agent
       console.log('Updating ElevenLabs agent:', elevenLabsAgentId);
       await updateElevenLabsAgent(elevenLabsApiKey, elevenLabsAgentId, config);
