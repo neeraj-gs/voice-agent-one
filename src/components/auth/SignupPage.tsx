@@ -4,14 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, Zap, ArrowRight, User, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../utils/cn';
 
 export const SignupPage: React.FC = () => {
-  const navigate = useNavigate();
   const { signUp, isLoading, error, clearError } = useAuthStore();
 
   const [fullName, setFullName] = useState('');

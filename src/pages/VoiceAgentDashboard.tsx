@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
 import {
@@ -14,7 +14,6 @@ import {
   Square,
   Settings,
   Code,
-  Download,
   Copy,
   Check,
   ExternalLink,
@@ -89,7 +88,7 @@ export const VoiceAgentDashboard: React.FC = () => {
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('html');
   const [copiedCode, setCopiedCode] = useState(false);
-  const [isTestingAgent, setIsTestingAgent] = useState(false);
+  const [, setIsTestingAgent] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
 

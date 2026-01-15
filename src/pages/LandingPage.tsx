@@ -18,7 +18,6 @@ import {
   Check,
   ArrowRight,
   ArrowLeft,
-  LayoutDashboard,
   Settings,
   Building2,
   BarChart3,

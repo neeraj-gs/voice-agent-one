@@ -97,9 +97,9 @@ export const PublicCallPage: React.FC = () => {
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs');
     },
-    onError: (err) => {
+    onError: (err: Error | string) => {
       console.error('ElevenLabs error:', err);
-      setCallError(err.message || 'Connection error occurred');
+      setCallError(typeof err === 'string' ? err : err.message || 'Connection error occurred');
     },
     onMessage: (message) => {
       console.log('Message:', message);

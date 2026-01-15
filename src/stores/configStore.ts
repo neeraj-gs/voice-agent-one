@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { BusinessConfig, APIKeys, AppConfig } from '../types';
+import type { BusinessConfig, APIKeys } from '../types';
 
 interface ConfigStore {
   // State

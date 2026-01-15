@@ -10,8 +10,6 @@ import {
   Plus,
   Trash2,
   Edit3,
-  Save,
-  X,
   Sparkles,
   MessageSquare,
   FileText,
@@ -19,7 +17,6 @@ import {
   Users,
   HelpCircle,
   BookOpen,
-  Settings,
   AlertCircle,
 } from 'lucide-react';
 import { Button, Input, Textarea, Card, CardContent } from '../ui';

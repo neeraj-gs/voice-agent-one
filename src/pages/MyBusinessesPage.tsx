@@ -15,13 +15,12 @@ import {
   Settings,
   Loader2,
   AlertTriangle,
-  BarChart3,
   Link2,
   Check,
   Bot,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
-import { useAuthStore, useUser } from '../stores/authStore';
+import { useUser } from '../stores/authStore';
 import {
   useBusinessStore,
   useBusinesses,

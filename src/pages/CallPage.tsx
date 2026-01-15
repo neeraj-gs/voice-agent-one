@@ -11,7 +11,6 @@ import {
   Phone,
   PhoneOff,
   Mic,
-  MicOff,
   ArrowLeft,
   ArrowRight,
   MessageSquare,
@@ -55,9 +54,9 @@ export const CallPage: React.FC = () => {
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs');
     },
-    onError: (err) => {
+    onError: (err: Error | string) => {
       console.error('ElevenLabs error:', err);
-      setError(err.message || 'Connection error occurred');
+      setError(typeof err === 'string' ? err : err.message || 'Connection error occurred');
     },
     onMessage: (message) => {
       console.log('Message:', message);

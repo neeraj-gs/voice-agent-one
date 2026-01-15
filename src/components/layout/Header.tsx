@@ -12,7 +12,6 @@ import {
   Building2,
   LogOut,
   Settings,
-  User,
   LayoutDashboard,
   Phone,
   Globe,

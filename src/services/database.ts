@@ -534,13 +534,13 @@ export function businessToConfig(business: Business): BusinessConfig {
     industry: business.industry as any,
     phone: business.phone || '',
     email: business.email || '',
-    website: business.website,
+    website: business.website ?? undefined,
     address: {
       street: business.address_street || '',
       city: business.address_city || '',
       state: business.address_state || '',
       zip: business.address_zip || '',
-      country: business.address_country,
+      country: business.address_country || 'United States',
     },
     hours: {
       weekdays: business.hours_weekdays,
@@ -550,7 +550,7 @@ export function businessToConfig(business: Business): BusinessConfig {
     staff: {
       name: business.staff_name || '',
       title: business.staff_title || '',
-      bio: business.staff_bio,
+      bio: business.staff_bio ?? undefined,
     },
     branding: {
       primaryColor: business.branding_primary || '#3B82F6',

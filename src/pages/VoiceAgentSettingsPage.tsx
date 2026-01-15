@@ -20,26 +20,26 @@ import {
   ChevronUp,
   Check,
   AlertCircle,
-  RefreshCw,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
-import { useAuthStore, useUser } from '../stores/authStore';
+import { useUser } from '../stores/authStore';
 import {
   useBusinessStore,
   useActiveBusiness,
   useActiveVoiceAgent,
   useBusinessLoading,
 } from '../stores/businessStore';
-import { useBusiness, useAPIKeys, useConfigStore } from '../stores/configStore';
+import { useBusiness, useAPIKeys } from '../stores/configStore';
+import type { IndustryType } from '../types';
 import { updateAgent as updateElevenLabsAgent, getAgent as getElevenLabsAgent } from '../services/elevenlabs';
 import { cn } from '../utils/cn';
 
 export const VoiceAgentSettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const user = useUser();
+  useUser(); // Used for auth check
   const activeBusiness = useActiveBusiness();
   const activeVoiceAgent = useActiveVoiceAgent();
-  const isLoading = useBusinessLoading();
+  useBusinessLoading(); // Used for loading state
   const { updateCurrentBusiness, updateCurrentVoiceAgent, getActiveBusinessConfig, loadVoiceAgent } = useBusinessStore();
 
   // Fallback to localStorage data
@@ -242,7 +242,7 @@ export const VoiceAgentSettingsPage: React.FC = () => {
         name: localBusiness?.name || activeBusiness?.name || '',
         tagline: localBusiness?.tagline || activeBusiness?.tagline || '',
         description: localBusiness?.description || activeBusiness?.description || '',
-        industry: localBusiness?.industry || activeBusiness?.industry || 'other',
+        industry: (localBusiness?.industry || activeBusiness?.industry || 'other') as IndustryType,
         phone: localBusiness?.phone || activeBusiness?.phone || '',
         email: localBusiness?.email || activeBusiness?.email || '',
         address: localBusiness?.address || {

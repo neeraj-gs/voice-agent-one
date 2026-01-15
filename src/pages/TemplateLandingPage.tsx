@@ -22,7 +22,6 @@ import {
   Dumbbell,
   Home,
   UtensilsCrossed,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   Star,
@@ -47,7 +46,6 @@ import {
   Settings,
   RefreshCw,
   PhoneCall,
-  Mail,
   Github,
   Twitter,
   Linkedin,
@@ -138,28 +136,8 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] } },
 };
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.6 } },
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } },
-};
-
 const stagger = {
   visible: { transition: { staggerChildren: 0.12 } },
-};
-
-const slideInLeft = {
-  hidden: { opacity: 0, x: -60 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7 } },
-};
-
-const slideInRight = {
-  hidden: { opacity: 0, x: 60 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7 } },
 };
 
 export const TemplateLandingPage: React.FC = () => {
@@ -761,7 +739,7 @@ export const TemplateLandingPage: React.FC = () => {
             className="max-w-4xl mx-auto mt-20"
           >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {stats.map((stat, index) => (
+              {stats.map((stat) => (
                 <div
                   key={stat.label}
                   className="relative group p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all hover:bg-white/[0.04] text-center"

@@ -29,7 +29,7 @@ import type { BusinessConfig } from '../types';
 export const PublicLandingPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
-  const [voiceAgent, setVoiceAgent] = useState<VoiceAgent | null>(null);
+  const [, setVoiceAgent] = useState<VoiceAgent | null>(null);
   const [config, setConfig] = useState<BusinessConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
