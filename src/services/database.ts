@@ -75,6 +75,7 @@ export async function createBusiness(
         user_id: userId,
         name: config.name,
         slug,
+        product_type: config.productType || 'website_and_agent',
         tagline: config.tagline,
         description: config.description,
         industry: config.industry,
@@ -357,7 +358,7 @@ export async function createVoiceAgent(
     elevenlabsApiKey?: string;
     supabaseUrl?: string;
     supabaseAnonKey?: string;
-    calcomLink?: string;
+    bookingLink?: string;              // Generic booking link (Calendly, Cal.com, TidyCal, etc.)
     webhookTools?: any[];
   }
 ): Promise<{ data: VoiceAgent | null; error: string | null }> {
@@ -375,7 +376,7 @@ export async function createVoiceAgent(
         elevenlabs_api_key: agentData.elevenlabsApiKey,
         supabase_url: agentData.supabaseUrl,
         supabase_anon_key: agentData.supabaseAnonKey,
-        calcom_link: agentData.calcomLink,
+        booking_link: agentData.bookingLink,
         webhook_tools: agentData.webhookTools || [],
       })
       .select()
@@ -525,6 +526,7 @@ export async function setActiveBusiness(
  */
 export function businessToConfig(business: Business): BusinessConfig {
   return {
+    productType: business.product_type || 'website_and_agent',
     name: business.name,
     tagline: business.tagline || '',
     description: business.description || '',

@@ -245,10 +245,11 @@ const INDUSTRIES: { value: IndustryType; label: string; icon: React.ReactNode; d
 ];
 
 const STEPS = [
-  { id: 1, title: 'Industry', icon: Store },
-  { id: 2, title: 'Business Info', icon: Building2 },
-  { id: 3, title: 'API Keys', icon: Key },
-  { id: 4, title: 'Review & Edit', icon: Zap },
+  { id: 1, title: 'Product', icon: Zap },
+  { id: 2, title: 'Industry', icon: Store },
+  { id: 3, title: 'Business Info', icon: Building2 },
+  { id: 4, title: 'API Keys', icon: Key },
+  { id: 5, title: 'Review & Edit', icon: Sparkles },
 ];
 
 export const OnboardingWizard: React.FC = () => {
@@ -258,6 +259,7 @@ export const OnboardingWizard: React.FC = () => {
   const { user } = useAuthStore();
 
   const [step, setStep] = useState(1);
+  const [productType, setProductType] = useState<'website_and_agent' | 'agent_only' | null>(null);
   const [industry, setIndustry] = useState<IndustryType | null>(null);
   const [selectedIndustryLabel, setSelectedIndustryLabel] = useState<string>('');
   const [industrySearch, setIndustrySearch] = useState('');
@@ -299,8 +301,9 @@ export const OnboardingWizard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Validation
-  const isStep1Valid = industry !== null;
-  const isStep2Valid =
+  const isStep1Valid = productType !== null;
+  const isStep2Valid = industry !== null;
+  const isStep3Valid =
     businessInfo.name &&
     businessInfo.phone &&
     businessInfo.email &&
@@ -308,8 +311,8 @@ export const OnboardingWizard: React.FC = () => {
     businessInfo.state &&
     businessInfo.staffName &&
     businessInfo.staffTitle;
-  // Step 3 valid if: OpenAI key AND (existing agent ID OR ElevenLabs API key for auto-create)
-  const isStep3Valid = apiKeys.openaiKey && (
+  // Step 4 valid if: OpenAI key AND (existing agent ID OR ElevenLabs API key for auto-create)
+  const isStep4Valid = apiKeys.openaiKey && (
     useAutoCreate ? apiKeys.elevenLabsApiKey : apiKeys.elevenLabsAgentId
   );
 
@@ -355,6 +358,7 @@ export const OnboardingWizard: React.FC = () => {
 
       // Combine into full config
       const fullConfig: BusinessConfig = {
+        productType: productType || 'website_and_agent',
         name: businessInfo.name,
         tagline: generated.tagline,
         description: generated.description,
@@ -466,7 +470,7 @@ export const OnboardingWizard: React.FC = () => {
         elevenlabsApiKey: apiKeys.elevenLabsApiKey || undefined,
         supabaseUrl: apiKeys.supabaseUrl || undefined,
         supabaseAnonKey: apiKeys.supabaseAnonKey || undefined,
-        calcomLink: apiKeys.calcomLink || undefined,
+        bookingLink: apiKeys.bookingLink || undefined,
         webhookTools: enabledTools.length > 0 ? enabledTools : [],
       };
 
@@ -485,13 +489,17 @@ export const OnboardingWizard: React.FC = () => {
         elevenLabsApiKey: apiKeys.elevenLabsApiKey,
         supabaseUrl: apiKeys.supabaseUrl,
         supabaseAnonKey: apiKeys.supabaseAnonKey,
-        calcomLink: apiKeys.calcomLink,
+        bookingLink: apiKeys.bookingLink,
         webhookTools: enabledTools,
       });
       completeSetup();
 
-      // Navigate to site page with new business
-      navigate('/site');
+      // Navigate based on product type
+      if (productType === 'agent_only') {
+        navigate('/agent-dashboard');
+      } else {
+        navigate('/site');
+      }
     } catch (err) {
       console.error('Failed to save business:', err);
       setAgentCreationError(
@@ -501,7 +509,7 @@ export const OnboardingWizard: React.FC = () => {
     }
   };
 
-  const nextStep = () => setStep((s) => Math.min(s + 1, 4));
+  const nextStep = () => setStep((s) => Math.min(s + 1, 5));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
   return (
@@ -569,8 +577,136 @@ export const OnboardingWizard: React.FC = () => {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Step 1: Industry Selection */}
-            {step === 1 && (() => {
+            {/* Step 1: Product Type Selection */}
+            {step === 1 && (
+              <div>
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    What would you like to create?
+                  </h2>
+                  <p className="text-slate-400">
+                    Choose the product that best fits your needs
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                  {/* Website + Voice Agent Option */}
+                  <Card
+                    hover
+                    onClick={() => setProductType('website_and_agent')}
+                    className={cn(
+                      'transition-all cursor-pointer p-6',
+                      productType === 'website_and_agent'
+                        ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500'
+                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                    )}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex flex-col items-center text-center">
+                        <div
+                          className={cn(
+                            'w-16 h-16 rounded-2xl mb-4 flex items-center justify-center',
+                            productType === 'website_and_agent'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-slate-700 text-slate-300'
+                          )}
+                        >
+                          <Monitor size={32} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Website + Voice Agent</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          Get a complete landing page with an integrated AI voice assistant
+                        </p>
+                        <ul className="text-left text-sm space-y-2 text-slate-300">
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            Professional landing page
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            AI-powered voice agent
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            Public shareable URL
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            Mobile responsive
+                          </li>
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Voice Agent Only Option */}
+                  <Card
+                    hover
+                    onClick={() => setProductType('agent_only')}
+                    className={cn(
+                      'transition-all cursor-pointer p-6',
+                      productType === 'agent_only'
+                        ? 'ring-2 ring-purple-500 bg-purple-500/10 border-purple-500'
+                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                    )}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex flex-col items-center text-center">
+                        <div
+                          className={cn(
+                            'w-16 h-16 rounded-2xl mb-4 flex items-center justify-center',
+                            productType === 'agent_only'
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-slate-700 text-slate-300'
+                          )}
+                        >
+                          <Sparkles size={32} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Voice Agent Only</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                          Get just the voice agent to embed in your existing website
+                        </p>
+                        <ul className="text-left text-sm space-y-2 text-slate-300">
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            AI-powered voice agent
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            Test & edit dashboard
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            Embed code for any site
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check size={16} className="text-green-400" />
+                            React, Next.js, Shopify
+                          </li>
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {productType && (
+                  <div className="mt-6 text-center">
+                    <span className={cn(
+                      'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm',
+                      productType === 'website_and_agent'
+                        ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400'
+                        : 'bg-purple-500/20 border border-purple-500/30 text-purple-400'
+                    )}>
+                      <Check size={16} />
+                      {productType === 'website_and_agent' ? 'Website + Voice Agent' : 'Voice Agent Only'} selected
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Industry Selection */}
+            {step === 2 && (() => {
               const searchLower = industrySearch.toLowerCase().trim();
               const filteredIndustries = searchLower
                 ? INDUSTRIES.filter(
@@ -678,8 +814,8 @@ export const OnboardingWizard: React.FC = () => {
               );
             })()}
 
-            {/* Step 2: Business Info */}
-            {step === 2 && (
+            {/* Step 3: Business Info */}
+            {step === 3 && (
               <div>
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-white mb-2">
@@ -828,8 +964,8 @@ export const OnboardingWizard: React.FC = () => {
               </div>
             )}
 
-            {/* Step 3: API Keys */}
-            {step === 3 && (
+            {/* Step 4: API Keys */}
+            {step === 4 && (
               <div>
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-white mb-2">
@@ -1025,11 +1161,11 @@ export const OnboardingWizard: React.FC = () => {
                           className="bg-slate-900 border-slate-600 text-white"
                         />
                         <Input
-                          label="Cal.com Booking Link"
-                          placeholder="https://cal.com/yourname/meeting"
-                          hint="For embedded booking calendar"
-                          value={apiKeys.calcomLink || ''}
-                          onChange={(e) => handleAPIKeyChange('calcomLink', e.target.value)}
+                          label="Booking Link (Calendly, Cal.com, etc.)"
+                          placeholder="https://calendly.com/yourname/30min"
+                          hint="For appointment scheduling (supports Calendly, Cal.com, TidyCal, etc.)"
+                          value={apiKeys.bookingLink || ''}
+                          onChange={(e) => handleAPIKeyChange('bookingLink', e.target.value)}
                           className="bg-slate-900 border-slate-600 text-white"
                         />
                       </div>
@@ -1039,8 +1175,8 @@ export const OnboardingWizard: React.FC = () => {
               </div>
             )}
 
-            {/* Step 4: Generate & Review */}
-            {step === 4 && (
+            {/* Step 5: Generate & Review */}
+            {step === 5 && (
               <div>
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-white mb-2">
@@ -1118,13 +1254,14 @@ export const OnboardingWizard: React.FC = () => {
             Back
           </Button>
 
-          {step < 4 && (
+          {step < 5 && (
             <Button
               onClick={nextStep}
               disabled={
                 (step === 1 && !isStep1Valid) ||
                 (step === 2 && !isStep2Valid) ||
-                (step === 3 && !isStep3Valid)
+                (step === 3 && !isStep3Valid) ||
+                (step === 4 && !isStep4Valid)
               }
             >
               Continue
@@ -1132,7 +1269,7 @@ export const OnboardingWizard: React.FC = () => {
             </Button>
           )}
 
-          {step === 4 && generatedConfig && (
+          {step === 5 && generatedConfig && (
             <div className="flex flex-col items-end gap-2">
               {agentCreationError && (
                 <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">

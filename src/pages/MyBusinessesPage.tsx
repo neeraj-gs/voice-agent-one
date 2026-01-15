@@ -18,6 +18,7 @@ import {
   BarChart3,
   Link2,
   Check,
+  Bot,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useAuthStore, useUser } from '../stores/authStore';
@@ -75,10 +76,15 @@ export const MyBusinessesPage: React.FC = () => {
     setIsSwitching(false);
   };
 
-  // Set active business and navigate to site
-  const handleSelectBusiness = async (businessId: string) => {
+  // Set active business and navigate based on product type
+  const handleSelectBusiness = async (businessId: string, productType?: string) => {
     await switchToBusinessOnly(businessId);
-    navigate('/site');
+    // Navigate based on product type
+    if (productType === 'agent_only') {
+      navigate('/agent-dashboard');
+    } else {
+      navigate('/site');
+    }
   };
 
   // Set active business and navigate to settings
@@ -201,15 +207,29 @@ export const MyBusinessesPage: React.FC = () => {
                   {/* Quick Actions */}
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleSelectBusiness(business.id)}
+                      onClick={() => handleSelectBusiness(business.id, business.product_type)}
                       disabled={isSwitching}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50",
+                        business.product_type === 'agent_only'
+                          ? 'bg-purple-500 hover:bg-purple-600'
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      )}
                     >
-                      <Globe size={16} />
-                      View Site
+                      {business.product_type === 'agent_only' ? (
+                        <>
+                          <Bot size={16} />
+                          Agent Dashboard
+                        </>
+                      ) : (
+                        <>
+                          <Globe size={16} />
+                          View Site
+                        </>
+                      )}
                     </button>
-                    {/* Copy Public Link */}
-                    {business.slug && (
+                    {/* Copy Public Link - only for website_and_agent */}
+                    {business.slug && business.product_type !== 'agent_only' && (
                       <button
                         onClick={() => copyPublicUrl(business.id, business.slug)}
                         className={cn(

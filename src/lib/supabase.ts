@@ -36,11 +36,14 @@ export interface Profile {
   updated_at: string;
 }
 
+export type ProductType = 'website_and_agent' | 'agent_only';
+
 export interface Business {
   id: string;
   user_id: string;
   name: string;
   slug: string;
+  product_type: ProductType;          // 'website_and_agent' or 'agent_only'
   tagline: string | null;
   description: string | null;
   industry: string;
@@ -84,7 +87,8 @@ export interface VoiceAgent {
   elevenlabs_api_key: string | null;
   supabase_url: string | null;
   supabase_anon_key: string | null;
-  calcom_link: string | null;
+  booking_link: string | null;        // Generic booking link (Calendly, Cal.com, TidyCal, etc.)
+  calcom_link: string | null;         // Deprecated: kept for backwards compatibility
   webhook_tools: any[];
   is_active: boolean;
   created_at: string;

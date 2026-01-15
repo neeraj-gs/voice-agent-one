@@ -944,7 +944,7 @@ export const TemplateLandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Cal.com Booking Section */}
+      {/* Calendly Booking Section */}
       <section id="book" className="relative py-24 px-4">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/5 to-transparent" />
         <div className="max-w-6xl mx-auto relative">
@@ -1012,7 +1012,7 @@ export const TemplateLandingPage: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Right - Cal.com Embed Placeholder */}
+            {/* Right - Calendly Embed */}
             <motion.div
               initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -1022,51 +1022,19 @@ export const TemplateLandingPage: React.FC = () => {
             >
               <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-3xl blur-3xl opacity-40" />
 
-              <div className="relative bg-gradient-to-br from-gray-900/95 to-[#0a0a0f]/95 rounded-3xl border border-white/10 p-8 min-h-[500px]">
-                {/* Cal.com Embed Header */}
-                <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                      <Calendar size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Book a Strategy Call</h3>
-                      <p className="text-sm text-gray-500">30 min • Free consultation</p>
-                    </div>
-                  </div>
-                  <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium">
-                    Available Now
-                  </div>
-                </div>
-
-                {/* Cal.com Embed - Live Integration */}
-                <div className="relative">
-                  {/* Cal.com iframe embed */}
-                  <iframe
-                    src="https://cal.com/neeraj-gs?embed=true&theme=dark&hideEventTypeDetails=false"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      minHeight: '450px',
-                      border: 'none',
-                      borderRadius: '12px',
-                    }}
-                    title="Book a call with Neeraj"
-                    loading="lazy"
-                  />
-                </div>
-
-                {/* Trust Badge */}
-                <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-center gap-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Lock size={14} />
-                    Secure booking
-                  </span>
-                  <span>•</span>
-                  <span>No spam, ever</span>
-                  <span>•</span>
-                  <span>Cancel anytime</span>
-                </div>
+              <div className="relative bg-gradient-to-br from-gray-900/95 to-[#0a0a0f]/95 rounded-3xl border border-white/10 overflow-hidden min-h-[600px]">
+                {/* Calendly Embed */}
+                <iframe
+                  src="https://calendly.com/neeraj_gs/30min?hide_gdpr_banner=1&background_color=0a0a0f&text_color=ffffff&primary_color=22c55e"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '600px',
+                    border: 'none',
+                  }}
+                  title="Book a strategy call"
+                  loading="lazy"
+                />
               </div>
             </motion.div>
           </div>

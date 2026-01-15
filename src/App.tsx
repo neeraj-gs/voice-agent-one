@@ -15,6 +15,7 @@ import {
   VoiceAgentSettingsPage,
   PublicLandingPage,
   PublicCallPage,
+  VoiceAgentDashboard,
 } from './pages';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignupPage } from './components/auth/SignupPage';
@@ -167,6 +168,18 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <BusinessRoute>
                   <VoiceAgentSettingsPage />
+                </BusinessRoute>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Voice Agent Dashboard - for agent-only users */}
+          <Route
+            path="/agent-dashboard"
+            element={
+              <ProtectedRoute>
+                <BusinessRoute>
+                  <VoiceAgentDashboard />
                 </BusinessRoute>
               </ProtectedRoute>
             }
