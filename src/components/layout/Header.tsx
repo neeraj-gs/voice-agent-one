@@ -69,8 +69,12 @@ export const Header: React.FC = () => {
     navigate('/login');
   };
 
+  // Check if active business has a website (not agent_only)
+  const hasWebsite = activeBusiness?.product_type !== 'agent_only';
+
   const navItems = [
-    { path: '/site', label: 'Website', icon: Globe },
+    // Only show Website link if business has a website
+    ...(hasWebsite ? [{ path: '/site', label: 'Website', icon: Globe }] : []),
     { path: '/call', label: 'Voice Agent', icon: Phone },
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/settings/agent', label: 'Settings', icon: Settings },
