@@ -1,0 +1,1433 @@
+{
+  "name": "Voice Agent Bookings Management Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Patient History Checker",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        15680
+      ],
+      "id": "c4338328-c651-4c42-9a1f-570dcb203754",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "check-availability",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        544
+      ],
+      "id": "d1c95cfc-5d6b-42ba-8935-fa4df3f64f15",
+      "name": "Webhook - Check Availability",
+      "webhookId": "WILL_BE_AUTO_GENERATED"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming date and time\nconst preferredDate = $json.body.preferred_date; // YYYY-MM-DD\nconst preferredTime = $json.body.preferred_time; // HH:MM\n\n// Create datetime object\nconst datetime = new Date(`${preferredDate}T${preferredTime}:00`);\n\n// Check window: 30 minutes before and after\nconst startCheck = new Date(datetime.getTime() - 30 * 60000);\nconst endCheck = new Date(datetime.getTime() + 30 * 60000);\n\nreturn {\n  preferred_datetime: datetime.toISOString(),\n  check_start: startCheck.toISOString(),\n  check_end: endCheck.toISOString(),\n  date: preferredDate,\n  time: preferredTime\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        544
+      ],
+      "id": "b2a3f4b1-c6f6-4ee4-9f9c-e5f6ccf19ad2",
+      "name": "Parse Date & Time"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "condition": "isEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        544
+      ],
+      "id": "ea4226a9-8c7c-471a-8501-129e37249b7c",
+      "name": "Slot Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slot is available\nconst parsedData = $('Parse Date & Time').first().json;\n\nreturn {\n  available: true,\n  requested_date: parsedData.date,\n  requested_time: parsedData.time,\n  message: `Great news! The slot on ${parsedData.date} at ${parsedData.time} is available.`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        448
+      ],
+      "id": "6af70140-aa07-42bd-8097-6f0836435f14",
+      "name": "Format - Available"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slot is NOT available - suggest alternatives\nconst parsedData = $('Parse Date & Time').first().json;\nconst requestedDate = new Date(parsedData.preferred_datetime);\n\n// Generate 3 alternative time slots\nconst alternatives = [];\n\n// Next day, same time\nconst alt1 = new Date(requestedDate);\nalt1.setDate(alt1.getDate() + 1);\n\n// Same day, 2 hours later\nconst alt2 = new Date(requestedDate);\nalt2.setHours(alt2.getHours() + 2);\n\n// Next day, 2 hours earlier\nconst alt3 = new Date(requestedDate);\nalt3.setDate(alt3.getDate() + 1);\nalt3.setHours(alt3.getHours() - 2);\n\nalternatives.push({\n  date: alt1.toISOString().split('T')[0],\n  time: alt1.toTimeString().slice(0, 5)\n});\n\nalternatives.push({\n  date: alt2.toISOString().split('T')[0],\n  time: alt2.toTimeString().slice(0, 5)\n});\n\nalternatives.push({\n  date: alt3.toISOString().split('T')[0],\n  time: alt3.toTimeString().slice(0, 5)\n});\n\nreturn {\n  available: false,\n  requested_date: parsedData.date,\n  requested_time: parsedData.time,\n  alternatives: alternatives,\n  message: `I'm sorry, that time is already booked. Here are some alternatives: ${alternatives.map(a => `${a.date} at ${a.time}`).join(', ')}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        640
+      ],
+      "id": "4524dcff-3dd9-43f3-9f51-1df13c1739ab",
+      "name": "Format - Not Available"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        288,
+        544
+      ],
+      "id": "569b3ee5-c63b-42d6-98e0-e5be4de83e85",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>",
+          "mode": "list",
+          "cachedResultName": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>"
+        },
+        "timeMax": "={{ $now.plus(1, 'month') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -384,
+        544
+      ],
+      "id": "31d88585-30ff-4e5e-ba29-7344b266d68d",
+      "name": "Get availability in a calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Check Slot Availability",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        16160
+      ],
+      "id": "8ebe4aa8-4a69-42a6-9ff0-df8255dc9a31",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "AI Booking Agent",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1232,
+        16896
+      ],
+      "id": "0d5178cd-97ea-4afb-b400-48bfacad699d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "book-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        1648
+      ],
+      "id": "1fd78c9b-ce69-4819-a33c-88f6ea651567",
+      "name": "Webhook - Book Appointment",
+      "webhookId": "WILL_BE_AUTO_GENERATED"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.email_address }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        1648
+      ],
+      "id": "41136125-9fa1-4799-86f5-00724d4cdfc3",
+      "name": "Check Patient Exists",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "patients",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.email_address }}"
+            },
+            {
+              "fieldId": "is_first_visit",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.is_first_visit }}"
+            },
+            {
+              "fieldId": "full_name",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.patient_name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        1792
+      ],
+      "id": "a08d0c42-96d5-421a-a8d6-6849bbd57131",
+      "name": "Create New Patient",
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "appointments",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.patient_name }}"
+            },
+            {
+              "fieldId": "patient_email",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.email_address }}"
+            },
+            {
+              "fieldId": "appointment_date",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.appointment_date }}"
+            },
+            {
+              "fieldId": "appointment_time",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.appointment_time }}"
+            },
+            {
+              "fieldId": "primary_concern",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.primary_concern }}"
+            },
+            {
+              "fieldId": "is_first_visit",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.is_first_visit }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "confirmed"
+            },
+            {
+              "fieldId": "google_calendar_event_id",
+              "fieldValue": "={{ $('Create Calendar Event').item.json.id }}"
+            },
+            {
+              "fieldId": "call_summary",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.call_summary }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        1312
+      ],
+      "id": "d90f8e6d-3744-4a93-8be6-b779919ae4e3",
+      "name": "Save Appointment",
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "call_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "patient_email",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.email_address }}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.patient_name }}"
+            },
+            {
+              "fieldId": "call_outcome",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.action_type === 'book' ? 'appointment_booked' : $('Webhook - Book Appointment').item.json.body.action_type === 'reschedule' ? 'appointment_rescheduled' : 'appointment_cancelled' }}"
+            },
+            {
+              "fieldId": "conversation_summary",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.call_summary }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        1440
+      ],
+      "id": "86a184b4-1798-4d31-ae5a-6141528957bd",
+      "name": "Log Call",
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final success response based on action type\nconst webhookData = $('Webhook - Book Appointment').first().json.body;\nconst actionType = webhookData.action_type || 'book';\n\nlet response = {\n  success: true,\n  message: '',\n  appointment_details: {}\n};\n\nif (actionType === 'book' || actionType === 'Book') {\n  // Try to get calendar event from the booking path\n  const calendarEventItems = $('Create Calendar Event').all();\n  \n  if (calendarEventItems.length > 0) {\n    const calendarEvent = calendarEventItems[0].json;\n    \n    response.message = 'Appointment booked successfully';\n    response.appointment_details = {\n      patient_name: webhookData.patient_name,\n      email: webhookData.email_address,\n      date: webhookData.appointment_date,\n      time: webhookData.appointment_time,\n      calendar_event_id: calendarEvent.id,\n      status: 'confirmed'\n    };\n  }\n} else if (actionType === 'reschedule' || actionType === 'Reschedule') {\n  // Try to get calendar event from the reschedule path\n  const newCalendarEventItems = $('Create New Calendar Event - Reschedule').all();\n  \n  if (newCalendarEventItems.length > 0) {\n    const newCalendarEvent = newCalendarEventItems[0].json;\n    \n    response.message = 'Appointment rescheduled successfully';\n    response.appointment_details = {\n      patient_name: webhookData.patient_name,\n      email: webhookData.email_address,\n      date: webhookData.appointment_date,\n      time: webhookData.appointment_time,\n      calendar_event_id: newCalendarEvent.id,\n      status: 'confirmed'\n    };\n  }\n} else if (actionType === 'cancel' || actionType === 'Cancel') {\n  response.message = 'Appointment cancelled successfully';\n  response.appointment_details = {\n    patient_name: webhookData.patient_name,\n    email: webhookData.email_address,\n    status: 'cancelled'\n  };\n}\n\nreturn response;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        1440
+      ],
+      "id": "35d8328b-955b-41bb-b6c1-966a05557a7f",
+      "name": "Format Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        1440
+      ],
+      "id": "6990f474-5819-48d8-9b0d-263ba0d8256a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "942e3722-3011-478c-bb58-b8fc9cdf7273",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        1648
+      ],
+      "id": "f58b5852-e346-4be6-9e77-9f335d1e0def",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse appointment date and time from webhook\n// <<CUSTOMIZE_THIS>> Update timezone offset for your location\nconst TIMEZONE_OFFSET = '+05:30'; // Example: '+05:30' for IST, '-05:00' for EST\n\nconst webhookData = $('Webhook - Book Appointment').first().json.body;\nconst appointmentDate = webhookData.appointment_date; // YYYY-MM-DD\nconst appointmentTime = webhookData.appointment_time; // HH:MM\nconst patientName = webhookData.patient_name;\nconst emailAddress = webhookData.email_address;\nconst primaryConcern = webhookData.primary_concern;\n\n// Create datetime objects\nconst startDateTime = new Date(`${appointmentDate}T${appointmentTime}:00${TIMEZONE_OFFSET}`);\nconst endDateTime = new Date(startDateTime.getTime() + 30 * 60000); // Add 30 minutes\n\n// Format as ISO strings with timezone\nconst formatDateTime = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  const hours = String(date.getHours()).padStart(2, '0');\n  const minutes = String(date.getMinutes()).padStart(2, '0');\n  const seconds = String(date.getSeconds()).padStart(2, '0');\n  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${TIMEZONE_OFFSET}`;\n};\n\nconst startFormatted = formatDateTime(startDateTime);\nconst endFormatted = formatDateTime(endDateTime);\n\n// <<CUSTOMIZE_THIS>> Update with your business details\nconst BUSINESS_NAME = '<<YOUR_BUSINESS_NAME>>';\nconst STAFF_NAME = '<<YOUR_STAFF_NAME>>';\nconst BUSINESS_LOCATION = '<<YOUR_BUSINESS_LOCATION>>';\n\n// Create event summary\nconst summary = `Appointment - ${patientName}`;\n\n// Create event description\nconst description = `Patient: ${patientName}\nEmail: ${emailAddress}\nConcern: ${primaryConcern}\n\nStaff: ${STAFF_NAME}\nLocation: ${BUSINESS_NAME}, ${BUSINESS_LOCATION}`;\n\n// Return formatted data\nreturn {\n  start: startFormatted,\n  end: endFormatted,\n  summary: summary,\n  description: description,\n  patient_name: patientName,\n  patient_email: emailAddress,\n  primary_concern: primaryConcern,\n  appointment_date: appointmentDate,\n  appointment_time: appointmentTime,\n  attendees: [{\n    email: emailAddress\n  }]\n};"
+      },
+      "id": "cde195ec-70a7-435c-93cf-2bd70ac3aefb",
+      "name": "Prepare Calendar Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $json.patient_email }}"
+          ],
+          "description": "={{ $json.description }}",
+          "sendUpdates": "all",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "id": "48649dc4-b5cd-456e-a690-fdf37590260e",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        1312
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "id-1",
+                    "leftValue": "={{ $('Webhook - Book Appointment').item.json.body.action_type }}",
+                    "rightValue": "Book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Book"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "id-2",
+                    "leftValue": "={{ $('Webhook - Book Appointment').item.json.body.action_type }}",
+                    "rightValue": "Reschedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reschedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "id-3",
+                    "leftValue": "={{ $('Webhook - Book Appointment').item.json.body.action_type }}",
+                    "rightValue": "Cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancel"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d324aaf3-519b-4636-b225-116e31d7aad6",
+      "name": "Route by Action Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -288,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "appointments",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_email",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook - Book Appointment').item.json.body.email_address }}"
+            }
+          ]
+        }
+      },
+      "id": "2327c683-9128-44cf-bc8b-5db00dc21f73",
+      "name": "Get Existing Appointment - Reschedule",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        1504
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>"
+        },
+        "eventId": "={{ $('Get Existing Appointment - Reschedule').item.json.google_calendar_event_id }}",
+        "options": {
+          "sendUpdates": "all"
+        }
+      },
+      "id": "8df6cdde-4b3b-4d69-a039-2354b6d396fb",
+      "name": "Delete Old Calendar Event - Reschedule",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        1504
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse new appointment date and time from webhook\n// <<CUSTOMIZE_THIS>> Update timezone offset for your location\nconst TIMEZONE_OFFSET = '+05:30'; // Example: '+05:30' for IST, '-05:00' for EST\n\nconst webhookData = $('Webhook - Book Appointment').first().json.body;\nconst appointmentDate = webhookData.appointment_date; // YYYY-MM-DD\nconst appointmentTime = webhookData.appointment_time; // HH:MM\nconst patientName = webhookData.patient_name;\nconst emailAddress = webhookData.email_address;\nconst primaryConcern = webhookData.primary_concern;\n\n// Create datetime objects\nconst startDateTime = new Date(`${appointmentDate}T${appointmentTime}:00${TIMEZONE_OFFSET}`);\nconst endDateTime = new Date(startDateTime.getTime() + 30 * 60000); // Add 30 minutes\n\n// Format as ISO strings with timezone\nconst formatDateTime = (date) => {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  const hours = String(date.getHours()).padStart(2, '0');\n  const minutes = String(date.getMinutes()).padStart(2, '0');\n  const seconds = String(date.getSeconds()).padStart(2, '0');\n  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${TIMEZONE_OFFSET}`;\n};\n\nconst startFormatted = formatDateTime(startDateTime);\nconst endFormatted = formatDateTime(endDateTime);\n\n// <<CUSTOMIZE_THIS>> Update with your business details\nconst BUSINESS_NAME = '<<YOUR_BUSINESS_NAME>>';\nconst STAFF_NAME = '<<YOUR_STAFF_NAME>>';\nconst BUSINESS_LOCATION = '<<YOUR_BUSINESS_LOCATION>>';\n\n// Create event summary\nconst summary = `Appointment - ${patientName}`;\n\n// Create event description\nconst description = `Patient: ${patientName}\nEmail: ${emailAddress}\nConcern: ${primaryConcern}\n\nStaff: ${STAFF_NAME}\nLocation: ${BUSINESS_NAME}, ${BUSINESS_LOCATION}`;\n\n// Return formatted data\nreturn {\n  start: startFormatted,\n  end: endFormatted,\n  summary: summary,\n  description: description,\n  patient_name: patientName,\n  patient_email: emailAddress,\n  appointment_date: appointmentDate,\n  appointment_time: appointmentTime,\n  attendees: [{\n    email: emailAddress\n  }]\n};"
+      },
+      "id": "86b0e831-494d-49aa-840a-c767a0de169b",
+      "name": "Prepare New Calendar Data - Reschedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $json.patient_email }}"
+          ],
+          "description": "={{ $json.description }}",
+          "sendUpdates": "all",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "id": "f3bf3b01-9486-45dd-a87a-d62097581f98",
+      "name": "Create New Calendar Event - Reschedule",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        1504
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "appointments",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Existing Appointment - Reschedule').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "appointment_date",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.appointment_date }}"
+            },
+            {
+              "fieldId": "appointment_time",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.appointment_time }}"
+            },
+            {
+              "fieldId": "google_calendar_event_id",
+              "fieldValue": "={{ $('Create New Calendar Event - Reschedule').item.json.id }}"
+            },
+            {
+              "fieldId": "call_summary",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.call_summary }}"
+            }
+          ]
+        }
+      },
+      "id": "7c5a55cc-bd60-4dc6-b4b9-52a4e89ba8d7",
+      "name": "Update Appointment - Reschedule",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        832,
+        1504
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "appointments",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_email",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "id": "f460ef01-c423-4184-8007-1e85b291c0c2",
+      "name": "Get Existing Appointment - Cancel",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        1696
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "<<YOUR_GOOGLE_CALENDAR_EMAIL>>"
+        },
+        "eventId": "={{ $('Get Existing Appointment - Cancel').item.json.google_calendar_event_id }}",
+        "options": {
+          "sendUpdates": "all"
+        }
+      },
+      "id": "61d2c21b-3788-4470-b303-4148f2e3bc19",
+      "name": "Delete Calendar Event - Cancel",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        1696
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GOOGLE_CALENDAR_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "appointments",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Existing Appointment - Cancel').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "cancelled"
+            },
+            {
+              "fieldId": "call_summary",
+              "fieldValue": "={{ $('Webhook - Book Appointment').item.json.body.call_summary }}"
+            }
+          ]
+        }
+      },
+      "id": "b9bddae8-561b-430d-818f-7ca1046247f8",
+      "name": "Update Appointment Status - Cancel",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        832,
+        1696
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "appointments",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_email",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook - Check Patient1').first().json.body.email_address }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -128
+      ],
+      "id": "d7eb1656-d690-4523-9d37-c74ff3199334",
+      "name": "Supabase - Get Appointments",
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "check-patient-history",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        -32
+      ],
+      "id": "2c2c5735-8c59-45e3-8f72-ee0c1a188c39",
+      "name": "Webhook - Check Patient1",
+      "webhookId": "WILL_BE_AUTO_GENERATED"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.email_address }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -32
+      ],
+      "id": "09c4bdb1-9528-4a09-8f4a-6f0fee3f538f",
+      "name": "Supabase - Check Patient1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "<<YOUR_SUPABASE_CREDENTIAL_ID>>",
+          "name": "<<YOUR_SUPABASE_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b2c67e9a-cae3-4d86-9476-49532824a3a4",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "6d7d74ba-1c99-4998-8741-592ee8fe4b0f",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format comprehensive patient data for response\n// <<CUSTOMIZE_THIS>> Update the welcome message for your business\nconst BUSINESS_NAME = '<<YOUR_BUSINESS_NAME>>';\n\nconst patient = $('Supabase - Check Patient1').first().json;\n\n// Safely get appointments data\nlet appointments = [];\ntry {\n  const appointmentsData = $('Supabase - Get Appointments').all();\n  appointments = appointmentsData.map(item => item.json);\n} catch (error) {\n  // No appointments found\n  appointments = [];\n}\n\n// Format appointments summary\nconst upcomingAppointments = appointments.filter(apt => \n  apt.status === 'confirmed' && new Date(apt.appointment_date) >= new Date()\n);\n\nconst pastAppointments = appointments.filter(apt => \n  new Date(apt.appointment_date) < new Date()\n);\n\n// Get primary concerns from past visits\nconst concerns = pastAppointments.map(apt => apt.primary_concern).filter(Boolean);\n\nreturn {\n  patient_exists: true,\n  is_first_visit: false,\n  patient_id: patient.id,\n  full_name: patient.full_name,\n  email: patient.email,\n  phone_number: patient.phone_number,\n  total_previous_visits: patient.total_visits,\n  \n  // Appointment data\n  total_appointments: appointments.length,\n  upcoming_appointments_count: upcomingAppointments.length,\n  past_appointments_count: pastAppointments.length,\n  appointments: appointments,\n  last_appointment: appointments.length > 0 ? appointments[0] : null,\n  \n  // Summary\n  past_concerns: concerns,\n  message: `Welcome back ${patient.full_name}! You've visited ${BUSINESS_NAME} ${patient.total_visits} time(s) before. ${upcomingAppointments.length > 0 ? `You have ${upcomingAppointments.length} upcoming appointment(s).` : ''}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -128
+      ],
+      "id": "d16818c7-20a0-4352-93b3-78fb7a3061ee",
+      "name": "Format - Existing Patient1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// New patient response\n// <<CUSTOMIZE_THIS>> Update the welcome message for your business\nconst BUSINESS_NAME = '<<YOUR_BUSINESS_NAME>>';\n\nconst emailAddress = $('Webhook - Check Patient1').first().json.body.email_address;\n\nreturn {\n  patient_exists: false,\n  is_first_visit: true,\n  patient_id: null,\n  email: emailAddress,\n  total_previous_visits: 0,\n  total_appointments: 0,\n  total_calls: 0,\n  appointments: [],\n  call_logs: [],\n  message: `Welcome to ${BUSINESS_NAME}! As a new customer, please arrive 10 minutes early for registration.`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        64
+      ],
+      "id": "4056bdc1-6f30-4ef5-a3c0-2ad6d749e284",
+      "name": "Format - New Patient1"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -32
+      ],
+      "id": "322acbc8-8b42-4a44-bead-ad88046dd233",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compose email content dynamically based on action_type\n// <<CUSTOMIZE_THIS>> Update all business details below\nconst BUSINESS_NAME = '<<YOUR_BUSINESS_NAME>>';\nconst STAFF_NAME = '<<YOUR_STAFF_NAME>>';\nconst BUSINESS_LOCATION = '<<YOUR_BUSINESS_LOCATION>>';\nconst PRIMARY_COLOR = '#4CAF50'; // Change to your brand color\n\nconst webhookData = $('Webhook - Book Appointment').first().json.body;\nconst actionType = (webhookData.action_type || 'book').toLowerCase();\nconst patientName = webhookData.patient_name;\nconst patientEmail = webhookData.email_address;\nconst appointmentDate = webhookData.appointment_date;\nconst appointmentTime = webhookData.appointment_time;\nconst primaryConcern = webhookData.primary_concern || 'General consultation';\n\nlet subject = '';\nlet htmlBody = '';\n\n// Common email styling\nconst emailStyle = `\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background-color: ${PRIMARY_COLOR}; color: white; padding: 20px; text-align: center; }\n    .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; }\n    .details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid ${PRIMARY_COLOR}; }\n    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }\n    .button { background-color: ${PRIMARY_COLOR}; color: white; padding: 10px 20px; text-decoration: none; display: inline-block; margin: 10px 0; }\n  </style>\n`;\n\nif (actionType === 'book') {\n  subject = `Appointment Confirmation - ${appointmentDate} at ${appointmentTime}`;\n  htmlBody = `\n    ${emailStyle}\n    <div class=\"container\">\n      <div class=\"header\">\n        <h1>Appointment Confirmed</h1>\n      </div>\n      <div class=\"content\">\n        <p>Dear ${patientName},</p>\n        <p>Your appointment has been successfully booked with <strong>${STAFF_NAME}</strong> at <strong>${BUSINESS_NAME}</strong>.</p>\n        \n        <div class=\"details\">\n          <h3>Appointment Details:</h3>\n          <p><strong>Date:</strong> ${appointmentDate}</p>\n          <p><strong>Time:</strong> ${appointmentTime}</p>\n          <p><strong>Primary Concern:</strong> ${primaryConcern}</p>\n          <p><strong>Staff:</strong> ${STAFF_NAME}</p>\n          <p><strong>Location:</strong> ${BUSINESS_NAME}, ${BUSINESS_LOCATION}</p>\n        </div>\n        \n        <p><strong>Important Reminders:</strong></p>\n        <ul>\n          <li>Please arrive 10 minutes early for registration</li>\n          <li>Bring any previous records or documents</li>\n          <li>If you need to reschedule or cancel, please contact us at least 24 hours in advance</li>\n        </ul>\n        \n        <p>We look forward to seeing you!</p>\n      </div>\n      <div class=\"footer\">\n        <p>${BUSINESS_NAME}, ${BUSINESS_LOCATION}</p>\n        <p>For any queries, please contact us</p>\n      </div>\n    </div>\n  `;\n} else if (actionType === 'reschedule') {\n  subject = `Appointment Rescheduled - New Date: ${appointmentDate} at ${appointmentTime}`;\n  htmlBody = `\n    ${emailStyle}\n    <div class=\"container\">\n      <div class=\"header\">\n        <h1>Appointment Rescheduled</h1>\n      </div>\n      <div class=\"content\">\n        <p>Dear ${patientName},</p>\n        <p>Your appointment with <strong>${STAFF_NAME}</strong> at <strong>${BUSINESS_NAME}</strong> has been successfully rescheduled.</p>\n        \n        <div class=\"details\">\n          <h3>New Appointment Details:</h3>\n          <p><strong>Date:</strong> ${appointmentDate}</p>\n          <p><strong>Time:</strong> ${appointmentTime}</p>\n          <p><strong>Staff:</strong> ${STAFF_NAME}</p>\n          <p><strong>Location:</strong> ${BUSINESS_NAME}, ${BUSINESS_LOCATION}</p>\n        </div>\n        \n        <p><strong>Important Reminders:</strong></p>\n        <ul>\n          <li>Please arrive 10 minutes early for registration</li>\n          <li>Bring any previous records or documents</li>\n          <li>If you need to reschedule again, please contact us at least 24 hours in advance</li>\n        </ul>\n        \n        <p>We look forward to seeing you at your new appointment time!</p>\n      </div>\n      <div class=\"footer\">\n        <p>${BUSINESS_NAME}, ${BUSINESS_LOCATION}</p>\n        <p>For any queries, please contact us</p>\n      </div>\n    </div>\n  `;\n} else if (actionType === 'cancel') {\n  subject = `Appointment Cancelled - Confirmation`;\n  htmlBody = `\n    ${emailStyle}\n    <div class=\"container\">\n      <div class=\"header\">\n        <h1>Appointment Cancelled</h1>\n      </div>\n      <div class=\"content\">\n        <p>Dear ${patientName},</p>\n        <p>Your appointment with <strong>${STAFF_NAME}</strong> at <strong>${BUSINESS_NAME}</strong> has been cancelled as requested.</p>\n        \n        <div class=\"details\">\n          <h3>Cancelled Appointment:</h3>\n          <p><strong>Customer:</strong> ${patientName}</p>\n          <p><strong>Email:</strong> ${patientEmail}</p>\n        </div>\n        \n        <p>If you would like to book a new appointment in the future, please feel free to contact us anytime.</p>\n        \n        <p>We hope to see you again soon!</p>\n      </div>\n      <div class=\"footer\">\n        <p>${BUSINESS_NAME}, ${BUSINESS_LOCATION}</p>\n        <p>For any queries, please contact us</p>\n      </div>\n    </div>\n  `;\n}\n\nreturn {\n  to: patientEmail,\n  subject: subject,\n  html: htmlBody\n};"
+      },
+      "id": "ea7ca403-d1e2-48d6-9527-724c055a8fca",
+      "name": "Compose Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "2f596f9c-8a79-4ab3-a5ea-eb68653eb54c",
+      "name": "Send Email Notification1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        1440
+      ],
+      "webhookId": "WILL_BE_AUTO_GENERATED",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "<<YOUR_GMAIL_CREDENTIAL_ID>>",
+          "name": "<<YOUR_GMAIL_CREDENTIAL_NAME>>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Check Time Availability",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        560
+      ],
+      "id": "122db410-c417-439c-a092-bbdc387ca781",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Manage Bookings\n",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        1648
+      ],
+      "id": "57dd971a-80c9-4134-8ba9-0f6388f4c49c",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Check User History",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        -16
+      ],
+      "id": "939dd358-d8c9-4336-bd4c-d97c522e697c",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Parse Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Get availability in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slot Available?": {
+      "main": [
+        [
+          {
+            "node": "Format - Available",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format - Not Available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format - Available": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format - Not Available": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get availability in a calendar": {
+      "main": [
+        [
+          {
+            "node": "Slot Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Book Appointment": {
+      "main": [
+        [
+          {
+            "node": "Check Patient Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Patient Exists": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Patient": {
+      "main": [
+        [
+          {
+            "node": "Prepare Calendar Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment": {
+      "main": [
+        [
+          {
+            "node": "Log Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Call": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Response": {
+      "main": [
+        [
+          {
+            "node": "Compose Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Route by Action Type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create New Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Calendar Data": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Action Type": {
+      "main": [
+        [
+          {
+            "node": "Prepare Calendar Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Existing Appointment - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Existing Appointment - Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Appointment - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Calendar Event - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Calendar Event - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Prepare New Calendar Data - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare New Calendar Data - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Create New Calendar Event - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Calendar Event - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Update Appointment - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Log Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Appointment - Cancel": {
+      "main": [
+        [
+          {
+            "node": "Delete Calendar Event - Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Calendar Event - Cancel": {
+      "main": [
+        [
+          {
+            "node": "Update Appointment Status - Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment Status - Cancel": {
+      "main": [
+        [
+          {
+            "node": "Log Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Get Appointments": {
+      "main": [
+        [
+          {
+            "node": "Format - Existing Patient1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Check Patient1": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Check Patient1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase - Check Patient1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Get Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format - New Patient1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format - Existing Patient1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format - New Patient1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Notification1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "",
+  "tags": []
+}
