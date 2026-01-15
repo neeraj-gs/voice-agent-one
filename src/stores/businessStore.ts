@@ -36,6 +36,7 @@ interface BusinessActions {
   addBusiness: (userId: string, config: BusinessConfig) => Promise<{ businessId: string | null; error: string | null }>;
   updateCurrentBusiness: (updates: Partial<BusinessConfig>) => Promise<{ error: string | null }>;
   deleteCurrentBusiness: (userId: string) => Promise<{ error: string | null }>;
+  upgradeToWebsite: () => Promise<{ error: string | null }>;
   loadVoiceAgent: (businessId: string) => Promise<void>;
   saveVoiceAgent: (businessId: string, agentData: any) => Promise<{ error: string | null }>;
   updateCurrentVoiceAgent: (updates: any) => Promise<{ error: string | null }>;
@@ -206,6 +207,41 @@ export const useBusinessStore = create<BusinessStore>()(
           return { error: null };
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to delete business';
+          set({ error: message });
+          return { error: message };
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      upgradeToWebsite: async () => {
+        const activeBusiness = get().activeBusiness;
+        if (!activeBusiness) return { error: 'No active business' };
+
+        try {
+          set({ isLoading: true, error: null });
+
+          // Update product_type to website_and_agent
+          const { error } = await updateBusiness(activeBusiness.id, {
+            productType: 'website_and_agent',
+          } as any);
+          if (error) throw new Error(error);
+
+          // Reload the business to get updated data
+          const { data } = await getBusiness(activeBusiness.id);
+          if (data) {
+            set({ activeBusiness: data });
+            // Update in list
+            set((state) => ({
+              businesses: state.businesses.map((b) =>
+                b.id === data.id ? data : b
+              ),
+            }));
+          }
+
+          return { error: null };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to upgrade to website';
           set({ error: message });
           return { error: message };
         } finally {

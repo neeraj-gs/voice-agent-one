@@ -127,6 +127,8 @@ import {
   Stamp,
   Glasses,
   Plus,
+  Code,
+  Terminal,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -426,39 +428,38 @@ export const TemplateLandingPage: React.FC = () => {
 
   const pricingPlans = [
     {
-      name: 'Starter',
-      description: 'Perfect for small businesses getting started',
-      price: { monthly: 1000, yearly: 800 },
+      name: 'Voice Agent Only',
+      description: 'Embed AI voice agent on your existing website',
+      price: { monthly: 500, yearly: 400 },
       features: [
-        'AI-generated website',
-        '1 Voice Agent',
+        '1 AI Voice Agent',
+        'Embed code for any website',
+        'React, Next.js, Shopify support',
         '500 calls/month',
-        'Basic analytics dashboard',
+        'Test & edit dashboard',
+        'Basic analytics',
         'Email support',
-        'Community access',
         'Standard voice models',
-        '5 Knowledge base entries',
       ],
-      cta: 'Get Started',
+      cta: 'Get Voice Agent',
       highlighted: false,
-      icon: Gift,
-      gradient: 'from-slate-500 to-gray-500',
+      icon: Bot,
+      gradient: 'from-purple-500 to-violet-500',
+      badge: 'New',
     },
     {
-      name: 'Professional',
-      description: 'For growing businesses that need more power',
-      price: { monthly: 2500, yearly: 2000 },
+      name: 'Website + Agent',
+      description: 'Complete AI-powered website with voice assistant',
+      price: { monthly: 1500, yearly: 1200 },
       features: [
-        'Everything in Starter',
+        'AI-generated landing page',
+        '1 Voice Agent included',
+        'Public shareable URL',
         'Unlimited calls',
         'Unlimited knowledge base',
         'n8n webhook integration',
-        'Google Calendar sync',
-        'Advanced analytics',
         'Priority support (24h)',
-        'Remove branding',
         'Premium voice models',
-        'Multi-language support',
       ],
       cta: 'Start Free Trial',
       highlighted: true,
@@ -471,7 +472,7 @@ export const TemplateLandingPage: React.FC = () => {
       description: 'For large organizations with custom needs',
       price: { monthly: 4000, yearly: 3200 },
       features: [
-        'Everything in Professional',
+        'Everything in Website + Agent',
         'Multiple voice agents',
         'Multi-location support',
         'Custom API integrations',
@@ -479,8 +480,6 @@ export const TemplateLandingPage: React.FC = () => {
         '99.9% SLA guarantee',
         'White-label solution',
         'Custom AI training',
-        'On-premise deployment',
-        'SSO & advanced security',
       ],
       cta: 'Contact Sales',
       highlighted: false,
@@ -681,22 +680,57 @@ export const TemplateLandingPage: React.FC = () => {
               variants={fadeInUp}
               className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed"
             >
-              The complete business template with AI voice agent. Enter your info,
-              get a professional website + 24/7 voice assistant that books appointments.
-              <span className="text-white font-medium"> No coding required.</span>
+              Get a complete AI-powered website OR just the voice agent to embed on your existing site.
+              Books appointments, answers questions, and works 24/7.
+              <span className="text-white font-medium"> Setup in 5 minutes. No coding required.</span>
             </motion.p>
 
-            {/* CTA Buttons */}
-            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Link to="/setup">
-                <button className="group relative px-10 py-5 bg-white text-gray-900 rounded-2xl font-semibold text-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-3 w-full sm:w-auto shadow-2xl shadow-white/10">
-                  Start Building Free
-                  <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
-                </button>
+            {/* Two Options */}
+            <motion.div variants={fadeInUp} className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8">
+              <Link to="/setup" className="group">
+                <div className="relative p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-white/10 hover:border-blue-500/50 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <Globe size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Website + Agent</h3>
+                      <p className="text-xs text-gray-500">Full landing page included</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">Complete AI-powered website with voice booking. Perfect for new businesses.</p>
+                  <div className="flex items-center gap-2 text-blue-400 font-medium text-sm group-hover:gap-3 transition-all">
+                    Get Started <ArrowRight size={16} />
+                  </div>
+                </div>
               </Link>
+              <Link to="/setup" className="group">
+                <div className="relative p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-white/10 hover:border-purple-500/50 transition-all">
+                  <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">
+                    New
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+                      <Bot size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Voice Agent Only</h3>
+                      <p className="text-xs text-gray-500">Embed on any website</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">Get embed code for React, Next.js, Shopify, or any HTML site. 2-minute setup.</p>
+                  <div className="flex items-center gap-2 text-purple-400 font-medium text-sm group-hover:gap-3 transition-all">
+                    Get Voice Agent <ArrowRight size={16} />
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+
+            {/* Demo Button */}
+            <motion.div variants={fadeInUp} className="flex justify-center mb-8">
               <a href="#demo">
-                <button className="group px-10 py-5 bg-white/5 border border-white/10 rounded-2xl font-semibold text-lg hover:bg-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-3 w-full sm:w-auto backdrop-blur-sm">
-                  <Play size={22} className="text-red-400" />
+                <button className="group px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-medium hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3 backdrop-blur-sm">
+                  <Play size={20} className="text-red-400" />
                   Watch Demo
                 </button>
               </a>
@@ -1222,6 +1256,148 @@ export const TemplateLandingPage: React.FC = () => {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Embed Showcase Section */}
+      <section id="embed" className="relative py-32 px-4">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/5 to-transparent" />
+        <div className="max-w-7xl mx-auto relative">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.span
+              variants={fadeInUp}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 text-purple-400 text-sm font-medium mb-6"
+            >
+              <Code size={16} />
+              EMBED ANYWHERE
+            </motion.span>
+            <motion.h2
+              variants={fadeInUp}
+              className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
+            >
+              Add Voice AI to
+              <span className="block bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent">
+                Your Existing Website
+              </span>
+            </motion.h2>
+            <motion.p
+              variants={fadeInUp}
+              className="text-xl text-gray-400 max-w-2xl mx-auto"
+            >
+              Already have a website? Just grab the embed code and add AI voice support in minutes.
+            </motion.p>
+          </motion.div>
+
+          {/* Platform Showcase */}
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            {/* Left - Code Preview */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+              className="relative"
+            >
+              <div className="absolute -inset-4 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-3xl blur-3xl opacity-50" />
+              <div className="relative bg-gray-900/90 rounded-2xl border border-white/10 overflow-hidden">
+                {/* Terminal Header */}
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 border-b border-white/5">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-700/50 rounded text-xs text-gray-400">
+                    <Terminal size={12} />
+                    HTML Embed
+                  </div>
+                </div>
+                {/* Code Content */}
+                <div className="p-6 overflow-x-auto">
+                  <pre className="text-sm font-mono">
+                    <code>
+                      <span className="text-gray-500">{'<!-- Add this to your HTML -->'}</span>{'\n'}
+                      <span className="text-pink-400">{'<script'}</span>{' '}
+                      <span className="text-cyan-400">src</span>
+                      <span className="text-white">=</span>
+                      <span className="text-green-400">"https://elevenlabs.io/convai-widget/index.js"</span>{'\n'}
+                      {'  '}<span className="text-cyan-400">async</span>{' '}
+                      <span className="text-cyan-400">type</span>
+                      <span className="text-white">=</span>
+                      <span className="text-green-400">"text/javascript"</span>
+                      <span className="text-pink-400">{'>'}</span>
+                      <span className="text-pink-400">{'</script>'}</span>{'\n\n'}
+                      <span className="text-pink-400">{'<elevenlabs-convai'}</span>{' '}
+                      <span className="text-cyan-400">agent-id</span>
+                      <span className="text-white">=</span>
+                      <span className="text-green-400">"your-agent-id"</span>
+                      <span className="text-pink-400">{'>'}</span>{'\n'}
+                      <span className="text-pink-400">{'</elevenlabs-convai>'}</span>
+                    </code>
+                  </pre>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right - Platform Cards */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+              className="space-y-4"
+            >
+              {[
+                { name: 'HTML / Vanilla JS', desc: 'Add to any website with 2 lines of code', icon: Code, color: 'from-orange-500 to-red-500' },
+                { name: 'React', desc: 'Use the useConversation hook for full control', icon: Bot, color: 'from-cyan-500 to-blue-500' },
+                { name: 'Next.js', desc: 'Client component ready for App Router', icon: Globe, color: 'from-slate-500 to-gray-500' },
+                { name: 'Shopify', desc: 'Add to theme.liquid in minutes', icon: Package, color: 'from-green-500 to-emerald-500' },
+              ].map((platform, index) => (
+                <motion.div
+                  key={platform.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-all group"
+                >
+                  <div className={cn(
+                    'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center transition-transform group-hover:scale-110',
+                    platform.color
+                  )}>
+                    <platform.icon size={24} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-white">{platform.name}</h4>
+                    <p className="text-sm text-gray-500">{platform.desc}</p>
+                  </div>
+                  <Check size={20} className="text-green-500" />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mt-12"
+          >
+            <Link to="/setup">
+              <button className="group px-8 py-4 bg-gradient-to-r from-purple-500 to-violet-500 rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all flex items-center gap-3 mx-auto">
+                Get Your Embed Code
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
+            <p className="text-sm text-gray-500 mt-4">Setup takes less than 5 minutes</p>
+          </motion.div>
         </div>
       </section>
 

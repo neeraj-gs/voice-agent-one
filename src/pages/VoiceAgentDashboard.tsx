@@ -27,6 +27,11 @@ import {
   X,
   Loader2,
   Sparkles,
+  Rocket,
+  Users,
+  Search,
+  Share2,
+  ArrowRight,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button, Card, CardContent } from '../components/ui';
@@ -85,6 +90,10 @@ export const VoiceAgentDashboard: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('html');
   const [copiedCode, setCopiedCode] = useState(false);
   const [isTestingAgent, setIsTestingAgent] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
+
+  const { upgradeToWebsite } = useBusinessStore();
 
   // ElevenLabs conversation hook for testing
   const conversation = useConversation({
@@ -240,6 +249,16 @@ export default function Page() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const handleUpgradeToWebsite = async () => {
+    setIsUpgrading(true);
+    const { error } = await upgradeToWebsite();
+    setIsUpgrading(false);
+
+    if (!error) {
+      setShowUpgradeSuccess(true);
+    }
+  };
+
   const isConnected = conversation.status === 'connected';
   const isConnecting = conversation.status === 'connecting';
 
@@ -392,6 +411,83 @@ export default function Page() {
 
           {/* Right Column - Actions */}
           <div className="space-y-6">
+            {/* Upgrade to Website Card - Only for agent_only users */}
+            {activeBusiness.product_type === 'agent_only' && !showUpgradeSuccess && (
+              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-500/30 overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                      <Rocket size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Want a Website?</h3>
+                      <p className="text-sm text-purple-200">Get a professional landing page</p>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-300 text-sm mb-4">
+                    Upgrade to get a beautiful, SEO-optimized landing page with your voice agent built-in.
+                  </p>
+
+                  <div className="space-y-2 mb-5">
+                    {[
+                      { icon: Globe, text: 'Professional landing page' },
+                      { icon: Search, text: 'SEO optimized for search' },
+                      { icon: Users, text: 'Build customer trust' },
+                      { icon: Share2, text: 'Shareable public URL' },
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
+                        <item.icon size={14} className="text-purple-400" />
+                        <span>{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleUpgradeToWebsite}
+                    disabled={isUpgrading}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium rounded-xl transition-all disabled:opacity-50"
+                  >
+                    {isUpgrading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Upgrading...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} />
+                        Upgrade to Website
+                        <ArrowRight size={18} />
+                      </>
+                    )}
+                  </button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Upgrade Success Card */}
+            {showUpgradeSuccess && (
+              <Card className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 border-green-500/30 overflow-hidden">
+                <CardContent className="p-6 text-center">
+                  <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
+                    <Check size={32} className="text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Website Unlocked!</h3>
+                  <p className="text-green-200 text-sm mb-5">
+                    Your professional landing page is ready. Your voice agent is automatically integrated.
+                  </p>
+                  <button
+                    onClick={() => navigate('/site')}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-all"
+                  >
+                    <Globe size={18} />
+                    View Your Website
+                    <ArrowRight size={18} />
+                  </button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Quick Actions */}
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-6">

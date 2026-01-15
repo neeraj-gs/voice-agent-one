@@ -268,6 +268,7 @@ export async function updateBusiness(
     const updateData: any = {};
 
     if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.productType !== undefined) updateData.product_type = updates.productType;
     if (updates.tagline !== undefined) updateData.tagline = updates.tagline;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.industry !== undefined) updateData.industry = updates.industry;

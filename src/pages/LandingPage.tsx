@@ -17,6 +17,7 @@ import {
   Calendar,
   Check,
   ArrowRight,
+  ArrowLeft,
   LayoutDashboard,
   Settings,
   Building2,
@@ -24,20 +25,30 @@ import {
   Share2,
   Copy,
   ExternalLink,
+  Code,
+  X,
+  Globe,
+  Zap,
+  Shield,
 } from 'lucide-react';
 import { Button, Card, CardContent } from '../components/ui';
 import { useBusiness, useBranding } from '../stores/configStore';
 import { useIsAuthenticated } from '../stores/authStore';
-import { useActiveBusiness } from '../stores/businessStore';
+import { useActiveBusiness, useBusinessStore } from '../stores/businessStore';
 
 export const LandingPage: React.FC = () => {
   const business = useBusiness();
   const branding = useBranding();
   const isAuthenticated = useIsAuthenticated();
   const activeBusiness = useActiveBusiness();
+  const { activeVoiceAgent } = useBusinessStore();
 
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [embedModalStep, setEmbedModalStep] = useState<'info' | 'code'>('info');
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<'html' | 'react' | 'nextjs' | 'shopify'>('html');
   const shareMenuRef = useRef<HTMLDivElement>(null);
 
   // Close share menu when clicking outside
@@ -72,6 +83,83 @@ export const LandingPage: React.FC = () => {
   const openPublicPage = () => {
     if (publicUrl) {
       window.open(publicUrl, '_blank');
+    }
+  };
+
+  // Get agent ID for embed code
+  const agentId = activeVoiceAgent?.elevenlabs_agent_id || 'your-agent-id';
+
+  // Generate embed code based on platform
+  const getEmbedCode = (platform: 'html' | 'react' | 'nextjs' | 'shopify'): string => {
+    switch (platform) {
+      case 'html':
+        return `<!-- Add this to your HTML -->
+<script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
+<elevenlabs-convai agent-id="${agentId}"></elevenlabs-convai>`;
+      case 'react':
+        return `// Install: npm install @11labs/react
+import { useConversation } from '@11labs/react';
+
+function VoiceAgent() {
+  const conversation = useConversation({
+    agentId: '${agentId}',
+    onConnect: () => console.log('Connected'),
+    onDisconnect: () => console.log('Disconnected'),
+    onMessage: (message) => console.log('Message:', message),
+    onError: (error) => console.error('Error:', error),
+  });
+
+  return (
+    <button onClick={() => conversation.startSession()}>
+      Talk to AI
+    </button>
+  );
+}`;
+      case 'nextjs':
+        return `// app/components/VoiceAgent.tsx
+'use client';
+
+import { useConversation } from '@11labs/react';
+
+export function VoiceAgent() {
+  const conversation = useConversation({
+    agentId: '${agentId}',
+    onConnect: () => console.log('Connected'),
+    onDisconnect: () => console.log('Disconnected'),
+  });
+
+  return (
+    <button onClick={() => conversation.startSession()}>
+      Talk to AI
+    </button>
+  );
+}`;
+      case 'shopify':
+        return `<!-- Add to theme.liquid before </body> -->
+<script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
+<elevenlabs-convai agent-id="${agentId}"></elevenlabs-convai>
+
+<!-- Optional: Custom positioning -->
+<style>
+  elevenlabs-convai {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+  }
+</style>`;
+      default:
+        return '';
+    }
+  };
+
+  const copyEmbedCode = async () => {
+    try {
+      await navigator.clipboard.writeText(getEmbedCode(selectedPlatform));
+      setEmbedCopied(true);
+      setTimeout(() => setEmbedCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -143,6 +231,14 @@ export const LandingPage: React.FC = () => {
                     </AnimatePresence>
                   </div>
                 )}
+                {/* Embed Button */}
+                <button
+                  onClick={() => setShowEmbedModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-purple-400 hover:text-purple-300 hover:bg-slate-800 rounded-md transition-colors"
+                >
+                  <Code size={14} />
+                  <span className="hidden sm:inline">Embed</span>
+                </button>
                 <Link
                   to="/businesses"
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
@@ -169,6 +265,255 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Embed Modal - Two Page Design */}
+      <AnimatePresence>
+        {showEmbedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+            onClick={() => {
+              setShowEmbedModal(false);
+              setEmbedModalStep('info');
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: branding.primaryColor }}
+                  >
+                    <Code size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {embedModalStep === 'info' ? 'Voice Agent Embed' : 'Get Embed Code'}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {embedModalStep === 'info'
+                        ? 'Add AI voice to your existing website'
+                        : `Add ${business.voiceAgent.name} to your website`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Step Indicator */}
+                  <div className="hidden sm:flex items-center gap-1.5 mr-2">
+                    <div
+                      className="w-2 h-2 rounded-full transition-colors"
+                      style={{ backgroundColor: embedModalStep === 'info' ? branding.primaryColor : '#d1d5db' }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full transition-colors"
+                      style={{ backgroundColor: embedModalStep === 'code' ? branding.primaryColor : '#d1d5db' }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowEmbedModal(false);
+                      setEmbedModalStep('info');
+                    }}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X size={20} className="text-gray-500 dark:text-slate-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Page 1: Info Page */}
+              {embedModalStep === 'info' && (
+                <>
+                  <div className="p-6 overflow-auto max-h-[60vh]">
+                    {/* Hero Section */}
+                    <div className="text-center mb-8">
+                      <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                        style={{ backgroundColor: `${branding.primaryColor}15` }}
+                      >
+                        <Globe size={32} style={{ color: branding.primaryColor }} />
+                      </div>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        Already have a website?
+                      </h4>
+                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                        No need for a new landing page. Just embed {business.voiceAgent.name} directly on your existing website with a few lines of code.
+                      </p>
+                    </div>
+
+                    {/* Benefits */}
+                    <div className="grid sm:grid-cols-2 gap-4 mb-8">
+                      {[
+                        {
+                          icon: Zap,
+                          title: '2-Minute Setup',
+                          desc: 'Copy the code, paste it in your site, and your AI agent is live.',
+                        },
+                        {
+                          icon: Globe,
+                          title: 'Works Everywhere',
+                          desc: 'React, Next.js, Shopify, WordPress, or any HTML website.',
+                        },
+                        {
+                          icon: MessageSquare,
+                          title: 'Same AI Agent',
+                          desc: `${business.voiceAgent.name} with all your business knowledge built-in.`,
+                        },
+                        {
+                          icon: Shield,
+                          title: 'Fully Customizable',
+                          desc: 'Control positioning, styling, and behavior to match your brand.',
+                        },
+                      ].map((benefit, index) => (
+                        <div
+                          key={index}
+                          className="flex gap-3 p-4 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700"
+                        >
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${branding.primaryColor}15` }}
+                          >
+                            <benefit.icon size={20} style={{ color: branding.primaryColor }} />
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-gray-900 dark:text-white text-sm">
+                              {benefit.title}
+                            </h5>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {benefit.desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* What You Get */}
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-800/50 rounded-xl p-5 border border-gray-200 dark:border-slate-700">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <Check size={18} style={{ color: branding.primaryColor }} />
+                        What's included
+                      </h5>
+                      <ul className="space-y-2">
+                        {[
+                          'Floating voice widget that appears on your site',
+                          'Full conversation capabilities with your AI agent',
+                          'Automatic booking and appointment scheduling',
+                          'Works on mobile and desktop browsers',
+                          'No additional hosting or maintenance required',
+                        ].map((item, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <Check size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Footer - Info Page */}
+                  <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      Step 1 of 2
+                    </p>
+                    <button
+                      onClick={() => setEmbedModalStep('code')}
+                      style={{
+                        backgroundColor: branding.primaryColor,
+                        color: '#ffffff',
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Get Embed Code
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Page 2: Code Page */}
+              {embedModalStep === 'code' && (
+                <>
+                  {/* Platform Tabs */}
+                  <div className="flex gap-2 p-4 border-b border-gray-200 dark:border-slate-700 overflow-x-auto bg-gray-50 dark:bg-slate-800/50">
+                    {[
+                      { id: 'html' as const, label: 'HTML', desc: 'Any website' },
+                      { id: 'react' as const, label: 'React', desc: 'React apps' },
+                      { id: 'nextjs' as const, label: 'Next.js', desc: 'App Router' },
+                      { id: 'shopify' as const, label: 'Shopify', desc: 'Themes' },
+                    ].map((platform) => (
+                      <button
+                        key={platform.id}
+                        onClick={() => setSelectedPlatform(platform.id)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedPlatform === platform.id
+                            ? 'text-white'
+                            : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600'
+                        }`}
+                        style={selectedPlatform === platform.id ? { backgroundColor: branding.primaryColor } : {}}
+                      >
+                        {platform.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Code Display */}
+                  <div className="p-4 max-h-[400px] overflow-auto">
+                    <div className="bg-gray-900 dark:bg-slate-950 rounded-xl p-4 border border-gray-800 dark:border-slate-800">
+                      <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-x-auto">
+                        <code>{getEmbedCode(selectedPlatform)}</code>
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Footer - Code Page */}
+                  <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setEmbedModalStep('info')}
+                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      >
+                        <ArrowLeft size={16} />
+                        Back
+                      </button>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500 dark:text-slate-400">
+                        Agent ID: <span className="font-mono" style={{ color: branding.primaryColor }}>{agentId}</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={copyEmbedCode}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white ${
+                        embedCopied ? 'bg-green-500' : ''
+                      }`}
+                      style={!embedCopied ? { backgroundColor: branding.primaryColor } : {}}
+                    >
+                      <Copy size={16} />
+                      {embedCopied ? 'Copied!' : 'Copy Code'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Navigation */}
       <nav className={`fixed left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 ${isAuthenticated ? 'top-10' : 'top-0'}`}>

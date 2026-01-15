@@ -338,15 +338,25 @@ export const PublicCallPage: React.FC = () => {
         {/* Call Controls */}
         <div className="flex justify-center gap-4 mb-12">
           {isIdle ? (
-            <Button
-              size="lg"
+            <button
               onClick={startConversation}
-              className="px-8"
-              style={{ backgroundColor: branding.primaryColor }}
+              style={{
+                backgroundColor: branding.primaryColor,
+                color: '#ffffff',
+                padding: '12px 32px',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
-              <Phone size={20} className="mr-2" />
+              <Phone size={20} />
               Start Conversation
-            </Button>
+            </button>
           ) : (
             <>
               <Button
