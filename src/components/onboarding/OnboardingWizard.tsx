@@ -267,7 +267,8 @@ export const OnboardingWizard: React.FC = () => {
     sundayHours: 'Closed',
   });
   const [apiKeys, setApiKeysState] = useState<Partial<APIKeys>>({});
-  const [useAutoCreate, setUseAutoCreate] = useState(false); // Toggle for ElevenLabs mode
+  const [showOpenAIHelp, setShowOpenAIHelp] = useState(false);
+  const [showElevenLabsHelp, setShowElevenLabsHelp] = useState(false);
 
   // Webhook tools for n8n integration
   const [webhookTools, setWebhookTools] = useState<WebhookTool[]>([
@@ -308,10 +309,8 @@ export const OnboardingWizard: React.FC = () => {
     businessInfo.state &&
     businessInfo.staffName &&
     businessInfo.staffTitle;
-  // Step 4 valid if: OpenAI key AND (existing agent ID OR ElevenLabs API key for auto-create)
-  const isStep4Valid = apiKeys.openaiKey && (
-    useAutoCreate ? apiKeys.elevenLabsApiKey : apiKeys.elevenLabsAgentId
-  );
+  // Step 4 valid if: OpenAI key AND ElevenLabs API key
+  const isStep4Valid = apiKeys.openaiKey && apiKeys.elevenLabsApiKey;
 
   const handleBusinessInfoChange = (field: keyof BusinessInfo, value: string) => {
     setBusinessInfo((prev) => ({ ...prev, [field]: value }));
@@ -400,15 +399,15 @@ export const OnboardingWizard: React.FC = () => {
   const [agentCreationError, setAgentCreationError] = useState<string | null>(null);
 
   const handleComplete = async () => {
-    if (!generatedConfig || !apiKeys.openaiKey || !user) return;
+    if (!generatedConfig || !apiKeys.openaiKey || !apiKeys.elevenLabsApiKey || !user) return;
 
-    // Check if we need to create an agent (using auto-create mode with API key)
-    const needsAgentCreation = useAutoCreate && apiKeys.elevenLabsApiKey;
+    // Always create agent with API key (auto-create mode)
+    const needsAgentCreation = true;
 
     setIsCreatingAgent(true);
     setAgentCreationError(null);
 
-    let agentId = apiKeys.elevenLabsAgentId || '';
+    let agentId = '';
     const enabledTools = webhookTools.filter((t) => t.url);
 
     if (needsAgentCreation) {
@@ -441,9 +440,9 @@ export const OnboardingWizard: React.FC = () => {
       }
     }
 
-    // Using existing agent ID
+    // Verify agent was created successfully
     if (!agentId) {
-      setAgentCreationError('No agent ID available. Please provide an ElevenLabs Agent ID or use Auto-Create mode.');
+      setAgentCreationError('Failed to create voice agent. Please check your ElevenLabs API key and try again.');
       setIsCreatingAgent(false);
       return;
     }
@@ -977,15 +976,48 @@ export const OnboardingWizard: React.FC = () => {
                   {/* OpenAI - Required */}
                   <Card className="bg-slate-800/50 border-slate-700">
                     <CardContent className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Key size={18} className="text-amber-400" />
-                        <h3 className="font-semibold text-white">AI Content Generation</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Key size={18} className="text-amber-400" />
+                          <h3 className="font-semibold text-white">AI Content Generation</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowOpenAIHelp(!showOpenAIHelp)}
+                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <path d="M12 17h.01"></path>
+                          </svg>
+                          How to get API Key
+                        </button>
                       </div>
+
+                      {/* OpenAI Help Guide */}
+                      {showOpenAIHelp && (
+                        <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <h4 className="text-sm font-semibold text-blue-400 mb-2">How to get your OpenAI API Key:</h4>
+                          <ol className="text-sm text-slate-300 space-y-2 list-decimal list-inside">
+                            <li>Go to <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">platform.openai.com</a></li>
+                            <li>Sign in or create an account</li>
+                            <li>Click on your profile icon (top right) → "View API keys"</li>
+                            <li>Click "Create new secret key"</li>
+                            <li>Copy the key (starts with <code className="bg-slate-800 px-1 rounded">sk-</code>)</li>
+                            <li>Add billing details if you haven't already</li>
+                          </ol>
+                          <p className="text-xs text-slate-400 mt-3">
+                            Note: You need to add payment method and have credits to use the API.
+                          </p>
+                        </div>
+                      )}
+
                       <Input
                         label="OpenAI API Key *"
                         type="password"
                         placeholder="sk-..."
-                        hint="Used for AI content generation. Get yours at platform.openai.com"
+                        hint="Used for AI content generation"
                         value={apiKeys.openaiKey || ''}
                         onChange={(e) => handleAPIKeyChange('openaiKey', e.target.value)}
                         className="bg-slate-900 border-slate-600 text-white"
@@ -993,178 +1025,129 @@ export const OnboardingWizard: React.FC = () => {
                     </CardContent>
                   </Card>
 
-                  {/* ElevenLabs - Two Options */}
+                  {/* ElevenLabs */}
                   <Card className="bg-slate-800/50 border-slate-700">
                     <CardContent className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Sparkles size={18} className="text-purple-400" />
-                        <h3 className="font-semibold text-white">Voice Agent Setup</h3>
-                      </div>
-
-                      {/* Toggle between modes */}
-                      <div className="flex gap-2 mb-4">
-                        <button
-                          type="button"
-                          onClick={() => setUseAutoCreate(false)}
-                          className={cn(
-                            'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-                            !useAutoCreate
-                              ? 'bg-purple-500 text-white'
-                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                          )}
-                        >
-                          I have an Agent ID
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUseAutoCreate(true)}
-                          className={cn(
-                            'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-                            useAutoCreate
-                              ? 'bg-purple-500 text-white'
-                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                          )}
-                        >
-                          Auto-Create Agent
-                        </button>
-                      </div>
-
-                      {!useAutoCreate ? (
-                        <div className="space-y-3">
-                          <Input
-                            label="ElevenLabs Agent ID *"
-                            placeholder="agent_xxxxx"
-                            hint="Enter your existing agent ID from elevenlabs.io/conversational-ai"
-                            value={apiKeys.elevenLabsAgentId || ''}
-                            onChange={(e) => handleAPIKeyChange('elevenLabsAgentId', e.target.value)}
-                            className="bg-slate-900 border-slate-600 text-white"
-                          />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={18} className="text-purple-400" />
+                          <h3 className="font-semibold text-white">Voice Agent Setup</h3>
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                            <p className="text-sm text-purple-300">
-                              <strong>Auto-Create Mode:</strong> We'll create a voice agent for you
-                              using your ElevenLabs API key. The agent will be configured with your
-                              business info and prompts automatically.
-                            </p>
-                          </div>
-                          <Input
-                            label="ElevenLabs API Key *"
-                            type="password"
-                            placeholder="sk_..."
-                            hint="Your API key from elevenlabs.io → Profile → API Key"
-                            value={apiKeys.elevenLabsApiKey || ''}
-                            onChange={(e) => handleAPIKeyChange('elevenLabsApiKey', e.target.value)}
-                            className="bg-slate-900 border-slate-600 text-white"
-                          />
+                        <button
+                          type="button"
+                          onClick={() => setShowElevenLabsHelp(!showElevenLabsHelp)}
+                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <path d="M12 17h.01"></path>
+                          </svg>
+                          How to get API Key
+                        </button>
+                      </div>
 
-                          {/* n8n Webhook Tools */}
-                          <div className="pt-4 border-t border-slate-700">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Webhook size={16} className="text-orange-400" />
-                              <h4 className="text-sm font-medium text-white">n8n Webhook Tools (Optional)</h4>
-                            </div>
-                            <p className="text-xs text-slate-400 mb-4">
-                              Add your n8n webhook URLs to enable the agent to check availability and book appointments.
-                            </p>
-
-                            <div className="space-y-3">
-                              {/* Check History Tool */}
-                              <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                                <History size={18} className="text-blue-400 mt-2 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <label className="text-sm font-medium text-white block mb-1">
-                                    Check History
-                                  </label>
-                                  <Input
-                                    placeholder="https://your-n8n.com/webhook/check-history"
-                                    value={webhookTools.find((t) => t.id === 'check_history')?.url || ''}
-                                    onChange={(e) => handleWebhookToolChange('check_history', 'url', e.target.value)}
-                                    className="bg-slate-800 border-slate-600 text-white text-sm"
-                                  />
-                                  <p className="text-xs text-slate-500 mt-1">
-                                    Fetches customer/patient history from your database
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Check Availability Tool */}
-                              <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                                <Calendar size={18} className="text-green-400 mt-2 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <label className="text-sm font-medium text-white block mb-1">
-                                    Check Availability
-                                  </label>
-                                  <Input
-                                    placeholder="https://your-n8n.com/webhook/check-availability"
-                                    value={webhookTools.find((t) => t.id === 'check_availability')?.url || ''}
-                                    onChange={(e) => handleWebhookToolChange('check_availability', 'url', e.target.value)}
-                                    className="bg-slate-800 border-slate-600 text-white text-sm"
-                                  />
-                                  <p className="text-xs text-slate-500 mt-1">
-                                    Checks available appointment slots based on date/time
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Book Appointment Tool */}
-                              <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                                <CalendarCheck size={18} className="text-purple-400 mt-2 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <label className="text-sm font-medium text-white block mb-1">
-                                    Book Appointment
-                                  </label>
-                                  <Input
-                                    placeholder="https://your-n8n.com/webhook/book-appointment"
-                                    value={webhookTools.find((t) => t.id === 'book_appointment')?.url || ''}
-                                    onChange={(e) => handleWebhookToolChange('book_appointment', 'url', e.target.value)}
-                                    className="bg-slate-800 border-slate-600 text-white text-sm"
-                                  />
-                                  <p className="text-xs text-slate-500 mt-1">
-                                    Books an appointment with customer details
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                      {/* ElevenLabs Help Guide */}
+                      {showElevenLabsHelp && (
+                        <div className="mb-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                          <h4 className="text-sm font-semibold text-purple-400 mb-2">How to get your ElevenLabs API Key:</h4>
+                          <ol className="text-sm text-slate-300 space-y-2 list-decimal list-inside">
+                            <li>Go to <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">elevenlabs.io</a></li>
+                            <li>Sign in or create an account</li>
+                            <li>Click on your profile icon (bottom left)</li>
+                            <li>Select "Profile + API key"</li>
+                            <li>Copy your API key (starts with <code className="bg-slate-800 px-1 rounded">sk_</code>)</li>
+                          </ol>
+                          <p className="text-xs text-slate-400 mt-3">
+                            Note: Free tier has limited usage. Upgrade for more minutes.
+                          </p>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
 
-                  {/* Optional Keys */}
-                  <Card className="bg-slate-800/50 border-slate-700">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Sparkles size={18} className="text-slate-400" />
-                        <h3 className="font-semibold text-white">Optional Integrations</h3>
+                      <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg mb-4">
+                        <p className="text-sm text-purple-300">
+                          We'll automatically create a voice agent configured with your business info and prompts.
+                        </p>
                       </div>
-                      <div className="space-y-4">
-                        <Input
-                          label="Supabase URL"
-                          placeholder="https://xxxxx.supabase.co"
-                          hint="For storing appointments and call logs"
-                          value={apiKeys.supabaseUrl || ''}
-                          onChange={(e) => handleAPIKeyChange('supabaseUrl', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
-                        />
-                        <Input
-                          label="Supabase Anon Key"
-                          type="password"
-                          placeholder="eyJhbGci..."
-                          value={apiKeys.supabaseAnonKey || ''}
-                          onChange={(e) => handleAPIKeyChange('supabaseAnonKey', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
-                        />
-                        <Input
-                          label="Booking Link (Calendly, Cal.com, etc.)"
-                          placeholder="https://calendly.com/yourname/30min"
-                          hint="For appointment scheduling (supports Calendly, Cal.com, TidyCal, etc.)"
-                          value={apiKeys.bookingLink || ''}
-                          onChange={(e) => handleAPIKeyChange('bookingLink', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
-                        />
+
+                      <Input
+                        label="ElevenLabs API Key *"
+                        type="password"
+                        placeholder="sk_..."
+                        hint="Your API key from elevenlabs.io"
+                        value={apiKeys.elevenLabsApiKey || ''}
+                        onChange={(e) => handleAPIKeyChange('elevenLabsApiKey', e.target.value)}
+                        className="bg-slate-900 border-slate-600 text-white"
+                      />
+
+                      {/* n8n Webhook Tools */}
+                      <div className="mt-6 pt-4 border-t border-slate-700">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Webhook size={16} className="text-orange-400" />
+                          <h4 className="text-sm font-medium text-white">n8n Webhook Tools (Optional)</h4>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-4">
+                          Add your n8n webhook URLs to enable the agent to check availability and book appointments.
+                        </p>
+
+                        <div className="space-y-3">
+                          {/* Check History Tool */}
+                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
+                            <History size={18} className="text-blue-400 mt-2 flex-shrink-0" />
+                            <div className="flex-1">
+                              <label className="text-sm font-medium text-white block mb-1">
+                                Check History
+                              </label>
+                              <Input
+                                placeholder="https://your-n8n.com/webhook/check-history"
+                                value={webhookTools.find((t) => t.id === 'check_history')?.url || ''}
+                                onChange={(e) => handleWebhookToolChange('check_history', 'url', e.target.value)}
+                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                              />
+                              <p className="text-xs text-slate-500 mt-1">
+                                Fetches customer/patient history from your database
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Check Availability Tool */}
+                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
+                            <Calendar size={18} className="text-green-400 mt-2 flex-shrink-0" />
+                            <div className="flex-1">
+                              <label className="text-sm font-medium text-white block mb-1">
+                                Check Availability
+                              </label>
+                              <Input
+                                placeholder="https://your-n8n.com/webhook/check-availability"
+                                value={webhookTools.find((t) => t.id === 'check_availability')?.url || ''}
+                                onChange={(e) => handleWebhookToolChange('check_availability', 'url', e.target.value)}
+                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                              />
+                              <p className="text-xs text-slate-500 mt-1">
+                                Checks available appointment slots based on date/time
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Book Appointment Tool */}
+                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
+                            <CalendarCheck size={18} className="text-purple-400 mt-2 flex-shrink-0" />
+                            <div className="flex-1">
+                              <label className="text-sm font-medium text-white block mb-1">
+                                Book Appointment
+                              </label>
+                              <Input
+                                placeholder="https://your-n8n.com/webhook/book-appointment"
+                                value={webhookTools.find((t) => t.id === 'book_appointment')?.url || ''}
+                                onChange={(e) => handleWebhookToolChange('book_appointment', 'url', e.target.value)}
+                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                              />
+                              <p className="text-xs text-slate-500 mt-1">
+                                Books an appointment with customer details
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

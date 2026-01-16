@@ -4,13 +4,14 @@
  */
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, Zap, ArrowRight, User, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, Zap, ArrowRight, User } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../utils/cn';
 
 export const SignupPage: React.FC = () => {
+  const navigate = useNavigate();
   const { signUp, isLoading, error, clearError } = useAuthStore();
 
   const [fullName, setFullName] = useState('');
@@ -18,7 +19,6 @@ export const SignupPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,39 +41,10 @@ export const SignupPage: React.FC = () => {
     const { error } = await signUp(email, password, fullName);
 
     if (!error) {
-      setShowConfirmation(true);
+      // Navigate directly to setup - no email confirmation needed
+      navigate('/setup');
     }
   };
-
-  if (showConfirmation) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md text-center"
-        >
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-8 h-8 text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Check your email</h2>
-            <p className="text-slate-400 mb-6">
-              We've sent a confirmation link to <span className="text-white">{email}</span>.
-              Click the link to activate your account.
-            </p>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
-            >
-              Go to Login
-              <ArrowRight size={18} />
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
