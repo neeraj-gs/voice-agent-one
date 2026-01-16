@@ -896,38 +896,12 @@ export const TemplateLandingPage: React.FC = () => {
 
             {/* Video Container */}
             <div className="relative bg-gradient-to-br from-gray-900/95 to-[#0a0a0f]/95 rounded-3xl border border-white/10 overflow-hidden aspect-video">
-              {/* Play Button Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors cursor-pointer group">
-                <div className="relative">
-                  {/* Animated Rings */}
-                  <div className="absolute inset-0 -m-8 rounded-full border-2 border-white/20 animate-ping" />
-                  <div className="absolute inset-0 -m-4 rounded-full border border-white/10 animate-pulse" />
-
-                  {/* Play Button */}
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl shadow-red-500/30">
-                    <Play size={40} className="text-white ml-2" fill="white" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Video Placeholder Content */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-                <div className="absolute top-6 left-6 flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs text-gray-400 font-medium">VIDEO COMING SOON</span>
-                </div>
-
-                {/* Placeholder Thumbnail Effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-pink-900/20" />
-                <div className="absolute inset-0" style={{
-                  backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%)'
-                }} />
-
-                {/* Duration Badge */}
-                <div className="absolute bottom-6 right-6 px-3 py-1.5 bg-black/60 rounded-lg text-sm text-white font-medium backdrop-blur-sm">
-                  5:32
-                </div>
-              </div>
+              <iframe
+                src="https://www.loom.com/embed/de74a69d46084de6944eaf6cfc8bce2f?sid=de74a69d-4608-4de6-944e-af6cfc8bce2f"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
             </div>
 
             {/* Video Info */}
