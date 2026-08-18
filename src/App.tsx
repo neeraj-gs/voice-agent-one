@@ -3,25 +3,54 @@
  * Routes and authentication management
  */
 
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import {
-  TemplateLandingPage,
-  LandingPage,
-  CallPage,
-  DashboardPage,
-  SetupPage,
-  MyBusinessesPage,
-  VoiceAgentSettingsPage,
-  PublicLandingPage,
-  PublicCallPage,
-  VoiceAgentDashboard,
-} from './pages';
-import { LoginPage } from './components/auth/LoginPage';
-import { SignupPage } from './components/auth/SignupPage';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { Lamp, Legend } from './components/system/primitives';
 import { useAuthStore, useIsAuthenticated } from './stores/authStore';
 import { useBusinessStore, useActiveBusiness } from './stores/businessStore';
+
+/* Routes are split so a visitor landing on the marketing page does not
+   download the charting library, the voice SDK, the OpenAI client and the
+   3D renderer before it paints. */
+const TemplateLandingPage = lazy(() =>
+  import('./pages/TemplateLandingPage').then((m) => ({ default: m.TemplateLandingPage }))
+);
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const CallPage = lazy(() => import('./pages/CallPage'));
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const SetupPage = lazy(() =>
+  import('./pages/SetupPage').then((m) => ({ default: m.SetupPage }))
+);
+const MyBusinessesPage = lazy(() => import('./pages/MyBusinessesPage'));
+const VoiceAgentSettingsPage = lazy(() =>
+  import('./pages/VoiceAgentSettingsPage').then((m) => ({ default: m.VoiceAgentSettingsPage }))
+);
+const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'));
+const PublicCallPage = lazy(() =>
+  import('./pages/PublicCallPage').then((m) => ({ default: m.PublicCallPage }))
+);
+const VoiceAgentDashboard = lazy(() =>
+  import('./pages/VoiceAgentDashboard').then((m) => ({ default: m.VoiceAgentDashboard }))
+);
+const LoginPage = lazy(() =>
+  import('./components/auth/LoginPage').then((m) => ({ default: m.LoginPage }))
+);
+const SignupPage = lazy(() =>
+  import('./components/auth/SignupPage').then((m) => ({ default: m.SignupPage }))
+);
+
+/** Shown between routes. A lamp, not a spinner. */
+const RouteFallback: React.FC = () => (
+  <div className="flex min-h-screen items-center justify-center bg-ink">
+    <span className="flex items-center gap-2.5">
+      <Lamp state="ready" pulse />
+      <Legend>Loading</Legend>
+    </span>
+  </div>
+);
 
 // Protected route that requires authentication
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -92,6 +121,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthInitializer>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           {/* Home - Template landing page (marketing) or redirect */}
           <Route path="/" element={<HomeRoute />} />
@@ -188,6 +218,7 @@ const App: React.FC = () => {
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </AuthInitializer>
     </BrowserRouter>
   );
