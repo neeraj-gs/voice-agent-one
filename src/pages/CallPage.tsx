@@ -1,36 +1,39 @@
 /**
  * Call Page
  * Voice agent calling interface with ElevenLabs Conversational AI
+ *
+ * The console for one agent: the capsule on the left with the transport under
+ * it, the agent's brief and the business record on the right. The membrane is
+ * driven by the real frequency data coming out of the SDK, so what you see
+ * moving is what is actually being said.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
 import {
   Phone,
   PhoneOff,
   Mic,
+  MicOff,
   ArrowLeft,
   ArrowRight,
-  MessageSquare,
   Clock,
-  Volume2,
-  Loader2,
-  Info,
-  AlertCircle,
   Code,
   X,
   Copy,
-  Sparkles,
   Check,
-  Globe,
-  Zap,
-  Shield,
 } from 'lucide-react';
-import { Button, Card, CardContent } from '../components/ui';
+import { Button } from '../components/ui';
+import { Header } from '../components/layout/Header';
+import { Legend, Lamp, Tag } from '../components/system/primitives';
+import { CapsuleDisplay } from '../components/three/CapsuleDisplay';
+import type { DiaphragmMode } from '../components/three/Diaphragm';
 import { useBusiness, useBranding, useAPIKeys } from '../stores/configStore';
 import { cn } from '../utils/cn';
+
+type Platform = 'html' | 'react' | 'nextjs' | 'shopify';
 
 export const CallPage: React.FC = () => {
   const business = useBusiness();
@@ -39,44 +42,75 @@ export const CallPage: React.FC = () => {
 
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [showEmbedModal, setShowEmbedModal] = useState(false);
-  const [embedModalStep, setEmbedModalStep] = useState<'info' | 'code'>('info');
-  const [selectedPlatform, setSelectedPlatform] = useState<'html' | 'react' | 'nextjs' | 'shopify'>('html');
-  const [embedCopied, setEmbedCopied] = useState(false);
-  const [showEmbedBanner, setShowEmbedBanner] = useState(true);
+  const [micMuted, setMicMuted] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
+  const [embedStep, setEmbedStep] = useState<'info' | 'code'>('info');
+  const [platform, setPlatform] = useState<Platform>('html');
+  const [copied, setCopied] = useState(false);
+
+  const levelRef = useRef(0);
 
   // ElevenLabs Conversation Hook
   const conversation = useConversation({
+    micMuted,
     onConnect: () => {
-      console.log('Connected to ElevenLabs');
       setError(null);
     },
     onDisconnect: () => {
-      console.log('Disconnected from ElevenLabs');
+      levelRef.current = 0;
     },
     onError: (err: Error | string) => {
       console.error('ElevenLabs error:', err);
-      setError(typeof err === 'string' ? err : err.message || 'Connection error occurred');
-    },
-    onMessage: (message) => {
-      console.log('Message:', message);
+      setError(typeof err === 'string' ? err : err.message || 'The line dropped. Try again.');
     },
   });
 
+  const isConnected = conversation.status === 'connected';
+  const isConnecting = conversation.status === 'connecting';
+  const isIdle = conversation.status === 'disconnected';
+
   // Timer for call duration
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (conversation.status === 'connected') {
-      interval = setInterval(() => {
-        setDuration((d) => d + 1);
-      }, 1000);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (isConnected) {
+      interval = setInterval(() => setDuration((d) => d + 1), 1000);
     } else {
       setDuration(0);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [conversation.status]);
+  }, [isConnected]);
+
+  // Drive the membrane from the SDK's own analyser. Output data while the
+  // agent talks, input data while the caller does.
+  useEffect(() => {
+    if (!isConnected) {
+      levelRef.current = 0;
+      return;
+    }
+    let raf = 0;
+    const read = (data: Uint8Array | undefined) => {
+      if (!data || data.length === 0) return null;
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      return sum / data.length / 255;
+    };
+    const tick = () => {
+      let v: number | null = null;
+      try {
+        v = conversation.isSpeaking
+          ? read(conversation.getOutputByteFrequencyData())
+          : read(conversation.getInputByteFrequencyData());
+      } catch {
+        v = null;
+      }
+      levelRef.current = Math.min(1, (v ?? 0) * 2.4);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isConnected, conversation]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -86,7 +120,7 @@ export const CallPage: React.FC = () => {
 
   const startConversation = useCallback(async () => {
     if (!apiKeys?.elevenLabsAgentId) {
-      setError('ElevenLabs Agent ID not configured');
+      setError('No agent is attached to this business yet. Add an Agent ID in Settings.');
       return;
     }
 
@@ -105,12 +139,12 @@ export const CallPage: React.FC = () => {
       console.error('Failed to start conversation:', err);
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError') {
-          setError('Microphone access denied. Please allow microphone access and try again.');
+          setError('The browser blocked the microphone. Allow it for this site, then start again.');
         } else {
-          setError(err.message || 'Failed to start conversation');
+          setError(err.message || 'Could not open the line.');
         }
       } else {
-        setError('Failed to start conversation');
+        setError('Could not open the line.');
       }
     }
   }, [apiKeys, conversation]);
@@ -123,20 +157,12 @@ export const CallPage: React.FC = () => {
     }
   }, [conversation]);
 
-  const toggleMute = useCallback(() => {
-    if (conversation.isSpeaking) {
-      // Can't mute while agent is speaking
-      return;
-    }
-    // Toggle microphone mute (ElevenLabs SDK handles this internally)
-  }, [conversation.isSpeaking]);
-
   // Get agent ID for embed code
   const agentId = apiKeys?.elevenLabsAgentId || 'your-agent-id';
 
   // Generate embed code based on platform
-  const getEmbedCode = (platform: 'html' | 'react' | 'nextjs' | 'shopify'): string => {
-    switch (platform) {
+  const getEmbedCode = (p: Platform): string => {
+    switch (p) {
       case 'html':
         return `<!-- Add this to your HTML -->
 <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
@@ -200,617 +226,343 @@ export function VoiceAgent() {
 
   const copyEmbedCode = async () => {
     try {
-      await navigator.clipboard.writeText(getEmbedCode(selectedPlatform));
-      setEmbedCopied(true);
-      setTimeout(() => setEmbedCopied(false), 2000);
+      await navigator.clipboard.writeText(getEmbedCode(platform));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
   };
 
+  // Escape closes the embed panel.
+  useEffect(() => {
+    if (!showEmbed) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShowEmbed(false);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showEmbed]);
+
   if (!business || !branding) {
     return null;
   }
 
-  const isConnected = conversation.status === 'connected';
-  const isConnecting = conversation.status === 'connecting';
-  const isIdle = conversation.status === 'disconnected';
+  const mode: DiaphragmMode = isConnecting
+    ? 'connecting'
+    : !isConnected
+    ? 'idle'
+    : conversation.isSpeaking
+    ? 'speaking'
+    : 'listening';
+
+  const agent = business.voiceAgent.name;
+
+  const canDo = [
+    `Book ${business.terms.appointment}s with ${business.staff.name}`,
+    `Answer questions about your ${business.terms.service}s`,
+    'Give out hours, address and directions',
+    `Move or cancel an existing ${business.terms.appointment}`,
+  ];
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: `linear-gradient(180deg, ${branding.primaryColor}15 0%, transparent 50%)`,
-      }}
-    >
-      {/* Header */}
-      <header className="border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/site" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-              <ArrowLeft size={20} />
-              <span>Back to {business.name}</span>
-            </Link>
+    <div className="min-h-screen bg-ink">
+      <Header />
+
+      <main className="mx-auto w-full max-w-[80rem] px-5 py-8 sm:px-8">
+        {/* Page plate */}
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-edge-soft pb-6">
+          <div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowEmbedModal(true)}
-                className="text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-900/20"
-              >
-                <Code size={16} className="mr-1.5" />
-                Embed
-              </Button>
-              <Link to="/dashboard">
-                <Button variant="ghost" size="sm">
-                  Dashboard
-                </Button>
-              </Link>
+              <Legend>Voice agent</Legend>
+              <span aria-hidden className="h-px w-6 bg-edge" />
+              <Tag tone={isConnected ? 'live' : 'neutral'}>{conversation.status}</Tag>
             </div>
+            <h1 className="display mt-3 text-[clamp(1.75rem,4vw,2.75rem)]">{agent}</h1>
+            <p className="mt-2 max-w-md text-[14px] text-bone-dim">
+              {business.voiceAgent.personality} &middot; answering for {business.name}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowEmbed(true)}>
+              <Code size={13} /> Embed
+            </Button>
+            <Link to="/site">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft size={13} /> Your site
+              </Button>
+            </Link>
           </div>
         </div>
-      </header>
 
-      {/* Embed Banner - Admin Only */}
-      <AnimatePresence>
-        {showEmbedBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            style={{ background: 'linear-gradient(to right, #7c3aed, #4f46e5)' }}
-          >
-            <div className="max-w-4xl mx-auto px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-                  >
-                    <Sparkles size={16} style={{ color: '#ffffff' }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p style={{ color: '#ffffff', fontSize: '14px', fontWeight: 500 }} className="truncate">
-                      Already have a website?
-                    </p>
-                    <p style={{ color: '#e9d5ff', fontSize: '12px' }} className="truncate">
-                      Embed just the voice agent on your existing site - works with React, Next.js, Shopify & more
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => setShowEmbedModal(true)}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      color: '#7c3aed',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <Code size={14} />
-                    <span className="hidden sm:inline">Get Embed Code</span>
-                    <span className="sm:hidden">Embed</span>
-                  </button>
-                  <button
-                    onClick={() => setShowEmbedBanner(false)}
-                    style={{ padding: '6px', borderRadius: '8px' }}
-                    className="hover:bg-white/10 transition-colors"
-                    aria-label="Dismiss"
-                  >
-                    <X size={16} style={{ color: 'rgba(255,255,255,0.8)' }} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-14">
+          {/* ── CAPSULE + TRANSPORT ── */}
+          <div className="flex flex-col items-center">
+            <CapsuleDisplay
+              mode={mode}
+              levelRef={levelRef}
+              name={agent}
+              elapsed={isConnected ? formatDuration(duration) : null}
+              className="w-full"
+            />
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="mb-6"
-          >
-            <div
-              className={cn(
-                'w-24 h-24 rounded-full flex items-center justify-center mx-auto',
-                'transition-all duration-300',
-                isConnected ? 'animate-pulse' : ''
-              )}
-              style={{
-                backgroundColor:
-                  isConnected
-                    ? branding.accentColor || '#22c55e'
-                    : isConnecting
-                    ? branding.primaryColor
-                    : `${branding.primaryColor}20`,
-              }}
-            >
-              {isConnecting ? (
-                <Loader2 size={40} className="text-white animate-spin" />
-              ) : isConnected ? (
-                <Volume2 size={40} className="text-white" />
+            <div className="mt-8 flex w-full max-w-[22rem] flex-col gap-3">
+              {isIdle ? (
+                <Button size="lg" onClick={startConversation} className="w-full">
+                  <Phone size={15} /> Start the call
+                </Button>
               ) : (
-                <MessageSquare size={40} style={{ color: branding.primaryColor }} />
+                <div className="grid grid-cols-[1fr_auto] gap-3">
+                  <Button variant="danger" size="lg" onClick={endConversation}>
+                    <PhoneOff size={15} /> End call
+                  </Button>
+                  <Button
+                    variant={micMuted ? 'primary' : 'secondary'}
+                    size="lg"
+                    onClick={() => setMicMuted((m) => !m)}
+                    aria-pressed={micMuted}
+                    title={micMuted ? 'Unmute your microphone' : 'Mute your microphone'}
+                  >
+                    {micMuted ? <MicOff size={15} /> : <Mic size={15} />}
+                    <span className="sr-only">
+                      {micMuted ? 'Unmute microphone' : 'Mute microphone'}
+                    </span>
+                  </Button>
+                </div>
+              )}
+
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    role="alert"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="border border-clip-deep bg-clip/10 px-3.5 py-2.5 font-mono text-[12px] leading-snug text-clip"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              {micMuted && isConnected && (
+                <p className="text-center font-mono text-[11px] text-amber">
+                  Your microphone is muted. {agent} cannot hear you.
+                </p>
               )}
             </div>
-          </motion.div>
+          </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {isConnected
-              ? `Speaking with ${business.voiceAgent.name}`
-              : isConnecting
-              ? 'Connecting...'
-              : `Talk to ${business.voiceAgent.name}`}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {isConnected
-              ? business.voiceAgent.personality
-              : `Your ${business.voiceAgent.personality} AI assistant for ${business.name}`}
-          </p>
-
-          {/* Duration */}
-          {isConnected && (
-            <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
-              <Clock size={16} />
-              <span>{formatDuration(duration)}</span>
-            </div>
-          )}
-
-          {/* Agent Speaking Indicator */}
-          {isConnected && conversation.isSpeaking && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 flex items-center justify-center gap-2 text-green-600"
-            >
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          {/* ── BRIEF + RECORD ── */}
+          <div className="space-y-px bg-edge-soft">
+            <section className="bg-ink py-6">
+              <div className="flex items-center gap-3">
+                <Legend>What it handles</Legend>
+                <span aria-hidden className="h-px flex-1 bg-edge-soft" />
               </div>
-              <span className="text-sm font-medium">{business.voiceAgent.name} is speaking...</span>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Error Message */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 flex items-center gap-3"
-            >
-              <AlertCircle size={20} />
-              <span>{error}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Call Controls */}
-        <div className="flex justify-center gap-4 mb-12">
-          {isIdle ? (
-            <button
-              onClick={startConversation}
-              style={{
-                backgroundColor: branding.primaryColor,
-                color: '#ffffff',
-                padding: '12px 32px',
-                borderRadius: '12px',
-                fontSize: '16px',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <Phone size={20} />
-              Start Conversation
-            </button>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={toggleMute}
-                className="w-14 h-14 rounded-full p-0"
-                disabled={conversation.isSpeaking}
-              >
-                <Mic size={24} />
-              </Button>
-              <Button
-                size="lg"
-                onClick={endConversation}
-                className="w-14 h-14 rounded-full p-0 bg-red-500 hover:bg-red-600"
-              >
-                <PhoneOff size={24} />
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* What the agent can do */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${branding.primaryColor}15` }}
-                >
-                  <Info size={20} style={{ color: branding.primaryColor }} />
-                </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  What {business.voiceAgent.name} Can Help With
-                </h3>
-              </div>
-              <ul className="space-y-3 text-gray-600 dark:text-gray-400">
-                <li className="flex items-start gap-2">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: `${branding.accentColor || branding.primaryColor}20` }}
-                  >
-                    <span
-                      className="text-xs"
-                      style={{ color: branding.accentColor || branding.primaryColor }}
-                    >
-                      ✓
-                    </span>
-                  </div>
-                  <span>Schedule {business.terms.appointment}s with {business.staff.name}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: `${branding.accentColor || branding.primaryColor}20` }}
-                  >
-                    <span
-                      className="text-xs"
-                      style={{ color: branding.accentColor || branding.primaryColor }}
-                    >
-                      ✓
-                    </span>
-                  </div>
-                  <span>Answer questions about our {business.terms.service}s</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: `${branding.accentColor || branding.primaryColor}20` }}
-                  >
-                    <span
-                      className="text-xs"
-                      style={{ color: branding.accentColor || branding.primaryColor }}
-                    >
-                      ✓
-                    </span>
-                  </div>
-                  <span>Provide business hours and location info</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: `${branding.accentColor || branding.primaryColor}20` }}
-                  >
-                    <span
-                      className="text-xs"
-                      style={{ color: branding.accentColor || branding.primaryColor }}
-                    >
-                      ✓
-                    </span>
-                  </div>
-                  <span>Reschedule or cancel existing {business.terms.appointment}s</span>
-                </li>
+              <ul className="mt-4 space-y-2.5">
+                {canDo.map((c) => (
+                  <li key={c} className="flex items-start gap-3 text-[14px] text-bone-dim">
+                    <Check size={13} className="mt-1 shrink-0 text-patina" />
+                    {c}
+                  </li>
+                ))}
               </ul>
-            </CardContent>
-          </Card>
+            </section>
 
-          {/* Business Info */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: branding.primaryColor }}
-                >
-                  {business.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {business.staff.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">{business.staff.title}</p>
-                </div>
+            <section className="bg-ink py-6">
+              <div className="flex items-center gap-3">
+                <Legend>Business record</Legend>
+                <span aria-hidden className="h-px flex-1 bg-edge-soft" />
               </div>
-              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                <div className="flex items-center gap-2">
-                  <Phone size={16} />
-                  <span>{business.phone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={16} />
-                  <span>Mon-Fri: {business.hours.weekdays}</span>
-                </div>
-                <p className="pt-2 border-t border-gray-200 dark:border-slate-700">
-                  {business.address.city}, {business.address.state}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                {[
+                  ['Trading as', business.name],
+                  ['Who', `${business.staff.name} · ${business.staff.title}`],
+                  ['Phone', business.phone],
+                  ['Weekdays', business.hours.weekdays],
+                  ['Where', `${business.address.city}, ${business.address.state}`],
+                  ['Calls it takes', business.terms.customer],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="legend">{k}</dt>
+                    <dd className="mt-1 text-[14px] text-bone">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
 
-        {/* Connection Status */}
-        <div className="mt-8 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Agent ID: <code className="px-2 py-1 bg-gray-200 dark:bg-slate-700 rounded text-xs">{apiKeys?.elevenLabsAgentId || 'Not configured'}</code>
-            <span className="mx-2">•</span>
-            Status: <span className={cn(
-              'font-medium',
-              isConnected ? 'text-green-600' : isConnecting ? 'text-yellow-600' : 'text-gray-600'
-            )}>
-              {conversation.status}
-            </span>
-          </p>
+            <section className="bg-ink py-6">
+              <div className="flex items-center gap-3">
+                <Legend>Connection</Legend>
+                <span aria-hidden className="h-px flex-1 bg-edge-soft" />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <span className="flex items-center gap-2">
+                  <Lamp state={isConnected ? 'live' : isConnecting ? 'ready' : 'off'} />
+                  <span className="readout text-[11px] text-bone-dim">{conversation.status}</span>
+                </span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <Legend>Agent ID</Legend>
+                  <code className="truncate rounded-panel bg-steel px-2 py-1 font-mono text-[11px] text-bone-dim">
+                    {apiKeys?.elevenLabsAgentId || 'not set'}
+                  </code>
+                </span>
+                {isConnected && (
+                  <span className="flex items-center gap-2">
+                    <Clock size={12} className="text-bone-faint" />
+                    <span className="readout text-[11px] text-bone-dim">
+                      {formatDuration(duration)}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </main>
 
-      {/* Embed Modal */}
+      {/* ── EMBED PANEL ── */}
       <AnimatePresence>
-        {showEmbedModal && (
+        {showEmbed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/85 p-4 backdrop-blur-sm"
             onClick={() => {
-              setShowEmbedModal(false);
-              setEmbedModalStep('info');
+              setShowEmbed(false);
+              setEmbedStep('info');
             }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Embed the voice agent"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl"
+              className="panel-lift flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden"
             >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: branding.primaryColor }}
-                  >
-                    <Code size={20} className="text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {embedModalStep === 'info' ? 'Voice Agent Embed' : 'Get Embed Code'}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                      {embedModalStep === 'info'
-                        ? 'Add AI voice to your existing website'
-                        : `Add ${business.voiceAgent.name} to your website`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Step Indicator */}
-                  <div className="hidden sm:flex items-center gap-1.5 mr-2">
-                    <div
-                      className="w-2 h-2 rounded-full transition-colors"
-                      style={{ backgroundColor: embedModalStep === 'info' ? branding.primaryColor : '#d1d5db' }}
-                    />
-                    <div
-                      className="w-2 h-2 rounded-full transition-colors"
-                      style={{ backgroundColor: embedModalStep === 'code' ? branding.primaryColor : '#d1d5db' }}
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowEmbedModal(false);
-                      setEmbedModalStep('info');
-                    }}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                  >
-                    <X size={20} className="text-gray-500 dark:text-slate-400" />
-                  </button>
-                </div>
+              <div className="flex items-center gap-3 border-b border-edge-soft px-5 py-3.5">
+                <Legend>{embedStep === 'info' ? 'Embed · what you get' : 'Embed · the code'}</Legend>
+                <span aria-hidden className="h-px flex-1 bg-edge-soft" />
+                <span className="readout text-[10px] text-bone-faint">
+                  {embedStep === 'info' ? '1 / 2' : '2 / 2'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmbed(false);
+                    setEmbedStep('info');
+                  }}
+                  aria-label="Close"
+                  className="text-bone-faint transition-colors hover:text-amber"
+                >
+                  <X size={16} />
+                </button>
               </div>
 
-              {/* Page 1: Info Page */}
-              {embedModalStep === 'info' && (
+              {embedStep === 'info' ? (
                 <>
-                  <div className="p-6 overflow-auto max-h-[60vh]">
-                    {/* Hero Section */}
-                    <div className="text-center mb-8">
-                      <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                        style={{ backgroundColor: `${branding.primaryColor}15` }}
-                      >
-                        <Globe size={32} style={{ color: branding.primaryColor }} />
-                      </div>
-                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        Already have a website?
-                      </h4>
-                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                        No need for a new landing page. Just embed {business.voiceAgent.name} directly on your existing website with a few lines of code.
-                      </p>
-                    </div>
+                  <div className="overflow-y-auto p-6">
+                    <h2 className="display text-[clamp(1.5rem,3vw,2rem)]">
+                      Keep the site
+                      <br />
+                      you already have
+                    </h2>
+                    <p className="mt-4 max-w-lg text-[14.5px] leading-relaxed text-bone-dim">
+                      {agent} does not need a new page to live on. Paste two lines into the site
+                      you run today and it starts answering there, with everything it already
+                      knows about {business.name}.
+                    </p>
 
-                    {/* Benefits */}
-                    <div className="grid sm:grid-cols-2 gap-4 mb-8">
+                    <div className="mt-8 grid gap-px bg-edge-soft sm:grid-cols-2">
                       {[
-                        {
-                          icon: Zap,
-                          title: '2-Minute Setup',
-                          desc: 'Copy the code, paste it in your site, and your AI agent is live.',
-                        },
-                        {
-                          icon: Globe,
-                          title: 'Works Everywhere',
-                          desc: 'React, Next.js, Shopify, WordPress, or any HTML website.',
-                        },
-                        {
-                          icon: MessageSquare,
-                          title: 'Same AI Agent',
-                          desc: `${business.voiceAgent.name} with all your business knowledge built-in.`,
-                        },
-                        {
-                          icon: Shield,
-                          title: 'Fully Customizable',
-                          desc: 'Control positioning, styling, and behavior to match your brand.',
-                        },
-                      ].map((benefit, index) => (
-                        <div
-                          key={index}
-                          className="flex gap-3 p-4 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700"
-                        >
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: `${branding.primaryColor}15` }}
-                          >
-                            <benefit.icon size={20} style={{ color: branding.primaryColor }} />
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 dark:text-white text-sm">
-                              {benefit.title}
-                            </h5>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {benefit.desc}
-                            </p>
-                          </div>
+                        ['Two minutes', 'Copy the snippet, paste it, publish. That is the whole job.'],
+                        ['Any platform', 'React, Next.js, Shopify, WordPress, or plain HTML.'],
+                        ['Same agent', `${agent}, with the same knowledge base and the same voice.`],
+                        ['Your styling', 'Position and style the widget to sit in your own layout.'],
+                      ].map(([t, d]) => (
+                        <div key={t} className="bg-steel p-4">
+                          <div className="display-lite text-[13px] text-bone">{t}</div>
+                          <p className="mt-1.5 text-[13px] leading-snug text-bone-dim">{d}</p>
                         </div>
                       ))}
                     </div>
 
-                    {/* What You Get */}
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-800/50 rounded-xl p-5 border border-gray-200 dark:border-slate-700">
-                      <h5 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <Check size={18} style={{ color: branding.primaryColor }} />
-                        What's included
-                      </h5>
-                      <ul className="space-y-2">
-                        {[
-                          'Floating voice widget that appears on your site',
-                          'Full conversation capabilities with your AI agent',
-                          'Automatic booking and appointment scheduling',
-                          'Works on mobile and desktop browsers',
-                          'No additional hosting or maintenance required',
-                        ].map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <Check size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <ul className="mt-8 space-y-2 border-t border-edge-soft pt-5">
+                      {[
+                        'A floating talk button on every page you add it to',
+                        'Full conversations, not a chat box',
+                        'Booking and rescheduling through the same webhooks',
+                        'Works on mobile and desktop browsers',
+                        'Nothing extra to host or maintain',
+                      ].map((i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-[13.5px] text-bone-dim">
+                          <Check size={13} className="mt-1 shrink-0 text-patina" />
+                          {i}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
-                  {/* Footer - Info Page */}
-                  <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                      Step 1 of 2
-                    </p>
-                    <button
-                      onClick={() => setEmbedModalStep('code')}
-                      style={{
-                        backgroundColor: branding.primaryColor,
-                        color: '#ffffff',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Get Embed Code
-                      <ArrowRight size={18} />
-                    </button>
+                  <div className="flex items-center justify-end gap-3 border-t border-edge-soft bg-ink-lift px-5 py-3.5">
+                    <Button size="md" onClick={() => setEmbedStep('code')}>
+                      Show the code <ArrowRight size={13} />
+                    </Button>
                   </div>
                 </>
-              )}
-
-              {/* Page 2: Code Page */}
-              {embedModalStep === 'code' && (
+              ) : (
                 <>
-                  {/* Platform Tabs */}
-                  <div className="flex gap-2 p-4 border-b border-gray-200 dark:border-slate-700 overflow-x-auto bg-gray-50 dark:bg-slate-800/50">
-                    {[
-                      { id: 'html' as const, label: 'HTML', desc: 'Any website' },
-                      { id: 'react' as const, label: 'React', desc: 'React apps' },
-                      { id: 'nextjs' as const, label: 'Next.js', desc: 'App Router' },
-                      { id: 'shopify' as const, label: 'Shopify', desc: 'Themes' },
-                    ].map((platform) => (
+                  <div className="flex gap-px overflow-x-auto border-b border-edge-soft bg-edge-soft">
+                    {(
+                      [
+                        ['html', 'HTML'],
+                        ['react', 'React'],
+                        ['nextjs', 'Next.js'],
+                        ['shopify', 'Shopify'],
+                      ] as [Platform, string][]
+                    ).map(([id, label]) => (
                       <button
-                        key={platform.id}
-                        onClick={() => setSelectedPlatform(platform.id)}
+                        key={id}
+                        onClick={() => setPlatform(id)}
+                        aria-pressed={platform === id}
                         className={cn(
-                          'flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                          selectedPlatform === platform.id
-                            ? 'text-white'
-                            : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600'
+                          'shrink-0 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors',
+                          platform === id
+                            ? 'bg-amber text-ink'
+                            : 'bg-steel text-bone-dim hover:text-bone'
                         )}
-                        style={selectedPlatform === platform.id ? { backgroundColor: branding.primaryColor } : {}}
                       >
-                        {platform.label}
+                        {label}
                       </button>
                     ))}
                   </div>
 
-                  {/* Code Display */}
-                  <div className="p-4 max-h-[400px] overflow-auto">
-                    <div className="bg-gray-900 dark:bg-slate-950 rounded-xl p-4 border border-gray-800 dark:border-slate-800">
-                      <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-x-auto">
-                        <code>{getEmbedCode(selectedPlatform)}</code>
-                      </pre>
-                    </div>
+                  <div className="flex-1 overflow-auto bg-ink p-5">
+                    <pre className="whitespace-pre-wrap font-mono text-[12.5px] leading-relaxed text-bone-dim">
+                      <code>{getEmbedCode(platform)}</code>
+                    </pre>
                   </div>
 
-                  {/* Footer - Code Page */}
-                  <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-edge-soft bg-ink-lift px-5 py-3.5">
+                    <div className="flex min-w-0 items-center gap-3">
                       <button
-                        onClick={() => setEmbedModalStep('info')}
-                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        onClick={() => setEmbedStep('info')}
+                        className="legend transition-colors hover:text-amber"
                       >
-                        <ArrowLeft size={16} />
-                        Back
+                        <ArrowLeft size={11} className="mr-1 inline" /> Back
                       </button>
-                      <span className="text-xs text-gray-400">|</span>
-                      <span className="text-xs text-gray-500 dark:text-slate-400">
-                        Agent ID: <span className="font-mono" style={{ color: branding.primaryColor }}>{agentId}</span>
+                      <span aria-hidden className="h-3 w-px bg-edge" />
+                      <span className="truncate font-mono text-[11px] text-bone-faint">
+                        Agent {agentId}
                       </span>
                     </div>
-                    <button
-                      onClick={copyEmbedCode}
-                      className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white',
-                        embedCopied ? 'bg-green-500' : ''
-                      )}
-                      style={!embedCopied ? { backgroundColor: branding.primaryColor } : {}}
-                    >
-                      <Copy size={16} />
-                      {embedCopied ? 'Copied!' : 'Copy Code'}
-                    </button>
+                    <Button size="sm" onClick={copyEmbedCode}>
+                      {copied ? <Check size={12} /> : <Copy size={12} />}
+                      {copied ? 'Copied' : 'Copy code'}
+                    </Button>
                   </div>
                 </>
               )}
@@ -821,3 +573,5 @@ export function VoiceAgent() {
     </div>
   );
 };
+
+export default CallPage;

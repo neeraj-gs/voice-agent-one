@@ -182,10 +182,10 @@ export const PublicCallPage: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-steel bg-ink flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <Loader2 className="w-12 h-12 text-amber animate-spin mx-auto mb-4" />
+          <p className="text-bone-faint text-bone-dim">Loading...</p>
         </div>
       </div>
     );
@@ -194,13 +194,13 @@ export const PublicCallPage: React.FC = () => {
   // Error state
   if (pageError || !config || !business) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-steel bg-ink flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <AlertCircle className="w-16 h-16 text-clip mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-bone text-bone mb-2">
             Business Not Found
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-bone-faint text-bone-dim mb-6">
             {pageError || 'The business you are looking for does not exist.'}
           </p>
           <Link to="/">
@@ -224,24 +224,24 @@ export const PublicCallPage: React.FC = () => {
       }}
     >
       {/* Header */}
-      <header className="border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg">
+      <header className="border-b border-edge-soft border-edge-soft bg-steel/80 bg-ink/92">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link
               to={`/p/${slug}`}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              className="flex items-center gap-2 text-bone-faint hover:text-bone text-bone-dim dark:hover:text-bone"
             >
               <ArrowLeft size={20} />
               <span>Back to {config.name}</span>
             </Link>
             <div className="flex items-center gap-3">
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                className="w-8 h-8 rounded-panel flex items-center justify-center text-bone font-bold text-sm"
                 style={{ backgroundColor: branding.primaryColor }}
               >
                 {config.name.charAt(0)}
               </div>
-              <span className="font-medium text-gray-900 dark:text-white text-sm hidden sm:block">
+              <span className="font-medium text-bone text-bone text-sm hidden sm:block">
                 {config.name}
               </span>
             </div>
@@ -273,23 +273,23 @@ export const PublicCallPage: React.FC = () => {
               }}
             >
               {isConnecting ? (
-                <Loader2 size={40} className="text-white animate-spin" />
+                <Loader2 size={40} className="text-bone animate-spin" />
               ) : isConnected ? (
-                <Volume2 size={40} className="text-white" />
+                <Volume2 size={40} className="text-bone" />
               ) : (
                 <MessageSquare size={40} style={{ color: branding.primaryColor }} />
               )}
             </div>
           </motion.div>
 
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-bone text-bone mb-2">
             {isConnected
               ? `Speaking with ${config.voiceAgent.name || 'AI Assistant'}`
               : isConnecting
               ? 'Connecting...'
               : `Talk to ${config.voiceAgent.name || 'AI Assistant'}`}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-bone-faint text-bone-dim">
             {isConnected
               ? config.voiceAgent.personality
               : `Your ${config.voiceAgent.personality || 'AI'} assistant for ${config.name}`}
@@ -297,7 +297,7 @@ export const PublicCallPage: React.FC = () => {
 
           {/* Duration */}
           {isConnected && (
-            <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
+            <div className="flex items-center justify-center gap-2 mt-4 text-bone-faint">
               <Clock size={16} />
               <span>{formatDuration(duration)}</span>
             </div>
@@ -308,12 +308,12 @@ export const PublicCallPage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 flex items-center justify-center gap-2 text-green-600"
+              className="mt-4 flex items-center justify-center gap-2 text-patina-glow"
             >
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 bg-patina rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-patina rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-patina rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <span className="text-sm font-medium">{config.voiceAgent.name || 'AI'} is speaking...</span>
             </motion.div>
@@ -327,7 +327,7 @@ export const PublicCallPage: React.FC = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 flex items-center gap-3"
+              className="mb-8 p-4 bg-clip/10 dark:bg-clip/10 border border-clip-deep dark:border-clip-deep rounded-panel text-clip dark:text-clip flex items-center gap-3"
             >
               <AlertCircle size={20} />
               <span>{callError}</span>
@@ -371,7 +371,7 @@ export const PublicCallPage: React.FC = () => {
               <Button
                 size="lg"
                 onClick={endConversation}
-                className="w-14 h-14 rounded-full p-0 bg-red-500 hover:bg-red-600"
+                className="w-14 h-14 rounded-full p-0 bg-clip bg-clip"
               >
                 <PhoneOff size={24} />
               </Button>
@@ -386,16 +386,16 @@ export const PublicCallPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-10 h-10 rounded-panel flex items-center justify-center"
                   style={{ backgroundColor: `${branding.primaryColor}15` }}
                 >
                   <Info size={20} style={{ color: branding.primaryColor }} />
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
+                <h3 className="font-semibold text-bone text-bone">
                   What {config.voiceAgent.name || 'AI'} Can Help With
                 </h3>
               </div>
-              <ul className="space-y-3 text-gray-600 dark:text-gray-400">
+              <ul className="space-y-3 text-bone-faint text-bone-dim">
                 <li className="flex items-start gap-2">
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -449,19 +449,19 @@ export const PublicCallPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  className="w-10 h-10 rounded-panel flex items-center justify-center text-bone font-bold"
                   style={{ backgroundColor: branding.primaryColor }}
                 >
                   {config.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                  <h3 className="font-semibold text-bone text-bone">
                     {config.staff.name}
                   </h3>
-                  <p className="text-sm text-gray-500">{config.staff.title}</p>
+                  <p className="text-sm text-bone-faint">{config.staff.title}</p>
                 </div>
               </div>
-              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+              <div className="space-y-3 text-sm text-bone-faint text-bone-dim">
                 <div className="flex items-center gap-2">
                   <Phone size={16} />
                   <span>{config.phone}</span>
@@ -470,7 +470,7 @@ export const PublicCallPage: React.FC = () => {
                   <Clock size={16} />
                   <span>Mon-Fri: {config.hours.weekdays}</span>
                 </div>
-                <p className="pt-2 border-t border-gray-200 dark:border-slate-700">
+                <p className="pt-2 border-t border-edge-soft border-edge-soft">
                   {config.address.city}, {config.address.state}
                 </p>
               </div>

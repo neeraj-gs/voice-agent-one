@@ -39,28 +39,28 @@ const Section: React.FC<{
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <Card className="bg-slate-800/50 border-slate-700 overflow-hidden">
+    <Card className="bg-steel border-edge-soft overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-steel-lift transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="text-blue-400">{icon}</div>
-          <span className="font-semibold text-white">{title}</span>
+          <div className="text-amber">{icon}</div>
+          <span className="font-semibold text-bone">{title}</span>
           {badge && (
-            <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+            <span className="px-2 py-0.5 bg-amber-shadow text-amber text-xs rounded-full">
               {badge}
             </span>
           )}
         </div>
         {isOpen ? (
-          <ChevronUp size={20} className="text-slate-400" />
+          <ChevronUp size={20} className="text-bone-dim" />
         ) : (
-          <ChevronDown size={20} className="text-slate-400" />
+          <ChevronDown size={20} className="text-bone-dim" />
         )}
       </button>
       {isOpen && (
-        <CardContent className="px-6 pb-6 pt-2 border-t border-slate-700">
+        <CardContent className="px-6 pb-6 pt-2 border-t border-edge-soft">
           {children}
         </CardContent>
       )}
@@ -135,8 +135,8 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
   return (
     <div className="space-y-4">
       {/* Info Banner */}
-      <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
-        <AlertCircle size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+      <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-panel flex items-start gap-3">
+        <AlertCircle size={20} className="text-amber flex-shrink-0 mt-0.5" />
         <div className="text-sm text-amber-200">
           <strong>Review & Customize:</strong> Edit any AI-generated content below.
           Add your own services, FAQs, and knowledge base entries.
@@ -151,14 +151,14 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
             label="Business Name"
             value={config.name}
             onChange={(e) => updateConfig({ name: e.target.value })}
-            className="bg-slate-900 border-slate-600 text-white"
+            className="bg-ink border-edge text-bone"
           />
           <Input
             label="Tagline"
             value={config.tagline}
             onChange={(e) => updateConfig({ tagline: e.target.value })}
             placeholder="A catchy phrase that describes your business"
-            className="bg-slate-900 border-slate-600 text-white"
+            className="bg-ink border-edge text-bone"
           />
           <Textarea
             label="Description"
@@ -166,7 +166,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
             onChange={(e) => updateConfig({ description: e.target.value })}
             rows={3}
             placeholder="Describe your business in 2-3 sentences"
-            className="bg-slate-900 border-slate-600 text-white"
+            className="bg-ink border-edge text-bone"
           />
         </div>
       </Section>
@@ -174,12 +174,12 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
       {/* Branding Section */}
       <Section title="Branding & Colors" icon={<Palette size={20} />}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-400 mb-4">
+          <p className="text-sm text-bone-dim mb-4">
             Customize the color scheme for your website
           </p>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-bone-dim mb-2">
                 Primary Color
               </label>
               <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, primaryColor: e.target.value },
                     })
                   }
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-slate-600"
+                  className="w-12 h-12 rounded-panel cursor-pointer border-2 border-edge"
                 />
                 <Input
                   value={config.branding.primaryColor}
@@ -200,12 +200,12 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, primaryColor: e.target.value },
                     })
                   }
-                  className="bg-slate-900 border-slate-600 text-white flex-1"
+                  className="bg-ink border-edge text-bone flex-1"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-bone-dim mb-2">
                 Secondary Color
               </label>
               <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, secondaryColor: e.target.value },
                     })
                   }
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-slate-600"
+                  className="w-12 h-12 rounded-panel cursor-pointer border-2 border-edge"
                 />
                 <Input
                   value={config.branding.secondaryColor}
@@ -226,12 +226,12 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, secondaryColor: e.target.value },
                     })
                   }
-                  className="bg-slate-900 border-slate-600 text-white flex-1"
+                  className="bg-ink border-edge text-bone flex-1"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-bone-dim mb-2">
                 Accent Color
               </label>
               <div className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, accentColor: e.target.value },
                     })
                   }
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-slate-600"
+                  className="w-12 h-12 rounded-panel cursor-pointer border-2 border-edge"
                 />
                 <Input
                   value={config.branding.accentColor}
@@ -252,29 +252,29 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       branding: { ...config.branding, accentColor: e.target.value },
                     })
                   }
-                  className="bg-slate-900 border-slate-600 text-white flex-1"
+                  className="bg-ink border-edge text-bone flex-1"
                 />
               </div>
             </div>
           </div>
           {/* Color Preview */}
-          <div className="mt-4 p-4 rounded-lg bg-slate-900/50">
-            <p className="text-sm text-slate-400 mb-2">Preview:</p>
+          <div className="mt-4 p-4 rounded-panel bg-ink/50">
+            <p className="text-sm text-bone-dim mb-2">Preview:</p>
             <div className="flex items-center gap-2">
               <div
-                className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                className="px-4 py-2 rounded-panel text-bone text-sm font-medium"
                 style={{ backgroundColor: config.branding.primaryColor }}
               >
                 Primary Button
               </div>
               <div
-                className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                className="px-4 py-2 rounded-panel text-bone text-sm font-medium"
                 style={{ backgroundColor: config.branding.secondaryColor }}
               >
                 Secondary
               </div>
               <div
-                className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                className="px-4 py-2 rounded-panel text-bone text-sm font-medium"
                 style={{ backgroundColor: config.branding.accentColor }}
               >
                 Accent
@@ -291,21 +291,21 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
         badge={`${config.services.length} services`}
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-bone-dim">
             Add or edit the services your business offers. These will be displayed on your website
             and used by the voice agent.
           </p>
 
           {config.services.map((service, index) => (
-            <Card key={service.id} className="bg-slate-900/50 border-slate-600">
+            <Card key={service.id} className="bg-ink/50 border-edge">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-slate-500">Service {index + 1}</span>
+                  <span className="text-xs text-bone-faint">Service {index + 1}</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeService(index)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 -mt-1 -mr-1"
+                    className="text-clip hover:text-red-300 hover:bg-clip/10 -mt-1 -mr-1"
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -315,13 +315,13 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                     placeholder="Service Name"
                     value={service.name}
                     onChange={(e) => updateService(index, { name: e.target.value })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <Input
                     placeholder="Category"
                     value={service.category}
                     onChange={(e) => updateService(index, { category: e.target.value })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <div className="col-span-2">
                     <Textarea
@@ -329,7 +329,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       value={service.description}
                       onChange={(e) => updateService(index, { description: e.target.value })}
                       rows={2}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-steel border-edge text-bone"
                     />
                   </div>
                   <Input
@@ -337,14 +337,14 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                     placeholder="Duration (min)"
                     value={service.duration}
                     onChange={(e) => updateService(index, { duration: parseInt(e.target.value) || 0 })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <Input
                     type="number"
                     placeholder="Price ($)"
                     value={service.price}
                     onChange={(e) => updateService(index, { price: parseInt(e.target.value) || 0 })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                 </div>
               </CardContent>
@@ -365,20 +365,20 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
         badge={`${config.faqs.length} FAQs`}
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-bone-dim">
             Add common questions and answers. The voice agent will use these to answer customer inquiries.
           </p>
 
           {config.faqs.map((faq, index) => (
-            <Card key={index} className="bg-slate-900/50 border-slate-600">
+            <Card key={index} className="bg-ink/50 border-edge">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-slate-500">FAQ {index + 1}</span>
+                  <span className="text-xs text-bone-faint">FAQ {index + 1}</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeFAQ(index)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 -mt-1 -mr-1"
+                    className="text-clip hover:text-red-300 hover:bg-clip/10 -mt-1 -mr-1"
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -388,14 +388,14 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                     placeholder="Question"
                     value={faq.question}
                     onChange={(e) => updateFAQ(index, { question: e.target.value })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <Textarea
                     placeholder="Answer"
                     value={faq.answer}
                     onChange={(e) => updateFAQ(index, { answer: e.target.value })}
                     rows={2}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                 </div>
               </CardContent>
@@ -416,20 +416,20 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
         badge={`${config.testimonials.length} reviews`}
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-bone-dim">
             Add customer testimonials to build trust. These will be displayed on your website.
           </p>
 
           {config.testimonials.map((testimonial, index) => (
-            <Card key={index} className="bg-slate-900/50 border-slate-600">
+            <Card key={index} className="bg-ink/50 border-edge">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-slate-500">Testimonial {index + 1}</span>
+                  <span className="text-xs text-bone-faint">Testimonial {index + 1}</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeTestimonial(index)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 -mt-1 -mr-1"
+                    className="text-clip hover:text-red-300 hover:bg-clip/10 -mt-1 -mr-1"
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -440,13 +440,13 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                       placeholder="Name (e.g., Sarah M.)"
                       value={testimonial.name}
                       onChange={(e) => updateTestimonial(index, { name: e.target.value })}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-steel border-edge text-bone"
                     />
                     <Input
                       placeholder="Role (e.g., New Client)"
                       value={testimonial.role}
                       onChange={(e) => updateTestimonial(index, { role: e.target.value })}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-steel border-edge text-bone"
                     />
                   </div>
                   <Textarea
@@ -454,20 +454,20 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                     value={testimonial.content}
                     onChange={(e) => updateTestimonial(index, { content: e.target.value })}
                     rows={2}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Rating</label>
+                    <label className="block text-xs text-bone-dim mb-1">Rating</label>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           onClick={() => updateTestimonial(index, { rating: star })}
                           className={cn(
-                            'w-8 h-8 rounded-lg transition-colors',
+                            'w-8 h-8 rounded-panel transition-colors',
                             star <= testimonial.rating
                               ? 'bg-yellow-400 text-yellow-900'
-                              : 'bg-slate-700 text-slate-400'
+                              : 'bg-steel-high text-bone-dim'
                           )}
                         >
                           ★
@@ -495,8 +495,8 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
         badge="Important"
       >
         <div className="space-y-4">
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <p className="text-sm text-blue-300">
+          <div className="p-3 bg-amber-shadow border border-amber/40 rounded-panel">
+            <p className="text-sm text-amber">
               <strong>This is what ElevenLabs uses.</strong> Customize the voice agent's personality,
               system prompt, and greeting message. The system prompt tells the AI how to behave.
             </p>
@@ -512,7 +512,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                 })
               }
               placeholder="e.g., Sarah, Alex, Taylor"
-              className="bg-slate-900 border-slate-600 text-white"
+              className="bg-ink border-edge text-bone"
             />
             <Input
               label="Personality"
@@ -523,15 +523,15 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                 })
               }
               placeholder="e.g., friendly and professional"
-              className="bg-slate-900 border-slate-600 text-white"
+              className="bg-ink border-edge text-bone"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-bone-dim mb-2">
               First Message (Greeting)
             </label>
-            <p className="text-xs text-slate-400 mb-2">
+            <p className="text-xs text-bone-dim mb-2">
               This is the first thing the AI says when a customer calls.
             </p>
             <Textarea
@@ -543,17 +543,17 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
               }
               rows={3}
               placeholder="Hello! Thank you for calling [Business Name]. How can I help you today?"
-              className="bg-slate-900 border-slate-600 text-white"
+              className="bg-ink border-edge text-bone"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-bone-dim mb-2">
               System Prompt
             </label>
-            <p className="text-xs text-slate-400 mb-2">
+            <p className="text-xs text-bone-dim mb-2">
               This is the main instruction set for the AI. It defines behavior, knowledge, and capabilities.
-              <strong className="text-amber-400"> Be detailed!</strong>
+              <strong className="text-amber"> Be detailed!</strong>
             </p>
             <Textarea
               value={config.voiceAgent.systemPrompt}
@@ -563,7 +563,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ config, onChange }) 
                 })
               }
               rows={12}
-              className="bg-slate-900 border-slate-600 text-white font-mono text-sm"
+              className="bg-ink border-edge text-bone font-mono text-sm"
             />
           </div>
         </div>
@@ -611,8 +611,8 @@ const KnowledgeBaseEditor: React.FC<{
 
   return (
     <div className="space-y-4">
-      <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-        <p className="text-sm text-purple-300">
+      <div className="p-3 bg-patina-shadow border border-patina/40 rounded-panel">
+        <p className="text-sm text-bone-dim">
           Add custom information that the voice agent should know about your business.
           This could include policies, special instructions, product details, or anything else
           that would help the AI assist your customers better.
@@ -620,16 +620,16 @@ const KnowledgeBaseEditor: React.FC<{
       </div>
 
       {/* Auto-generated Knowledge Preview */}
-      <Card className="bg-slate-900/30 border-slate-700">
+      <Card className="bg-ink/30 border-edge-soft">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={16} className="text-green-400" />
-            <span className="text-sm font-medium text-green-400">Auto-Included Knowledge</span>
+            <Sparkles size={16} className="text-patina-glow" />
+            <span className="text-sm font-medium text-patina-glow">Auto-Included Knowledge</span>
           </div>
-          <p className="text-xs text-slate-400 mb-2">
+          <p className="text-xs text-bone-dim mb-2">
             The following is automatically included in the voice agent's knowledge:
           </p>
-          <ul className="text-xs text-slate-500 space-y-1">
+          <ul className="text-xs text-bone-faint space-y-1">
             <li>• Business name, address, phone, and hours</li>
             <li>• All services with descriptions and pricing</li>
             <li>• All FAQs and their answers</li>
@@ -640,23 +640,23 @@ const KnowledgeBaseEditor: React.FC<{
 
       {/* Custom Knowledge Entries */}
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-slate-300">Custom Knowledge Entries</h4>
+        <h4 className="text-sm font-medium text-bone-dim">Custom Knowledge Entries</h4>
 
         {knowledgeBase.length === 0 ? (
-          <p className="text-sm text-slate-500 italic">
+          <p className="text-sm text-bone-faint italic">
             No custom knowledge entries yet. Add information about policies, special offers, or anything else.
           </p>
         ) : (
           knowledgeBase.map((entry: any, index: number) => (
-            <Card key={index} className="bg-slate-900/50 border-slate-600">
+            <Card key={index} className="bg-ink/50 border-edge">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-slate-500">Entry {index + 1}</span>
+                  <span className="text-xs text-bone-faint">Entry {index + 1}</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeEntry(index)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 -mt-1 -mr-1"
+                    className="text-clip hover:text-red-300 hover:bg-clip/10 -mt-1 -mr-1"
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -666,14 +666,14 @@ const KnowledgeBaseEditor: React.FC<{
                     placeholder="Title (e.g., Cancellation Policy, Parking Info)"
                     value={entry.title}
                     onChange={(e) => updateEntry(index, { title: e.target.value })}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                   <Textarea
                     placeholder="Content - Detailed information the AI should know..."
                     value={entry.content}
                     onChange={(e) => updateEntry(index, { content: e.target.value })}
                     rows={4}
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-steel border-edge text-bone"
                   />
                 </div>
               </CardContent>
@@ -688,9 +688,9 @@ const KnowledgeBaseEditor: React.FC<{
       </div>
 
       {/* Example Knowledge Entries */}
-      <div className="mt-6 p-4 bg-slate-900/30 rounded-lg">
-        <h4 className="text-sm font-medium text-slate-400 mb-2">Example Entries:</h4>
-        <ul className="text-xs text-slate-500 space-y-2">
+      <div className="mt-6 p-4 bg-ink/30 rounded-panel">
+        <h4 className="text-sm font-medium text-bone-dim mb-2">Example Entries:</h4>
+        <ul className="text-xs text-bone-faint space-y-2">
           <li><strong>Cancellation Policy:</strong> "We require 24 hours notice for cancellations. Late cancellations are subject to a $50 fee."</li>
           <li><strong>Insurance:</strong> "We accept most major insurance providers including Aetna, Blue Cross, and United Healthcare."</li>
           <li><strong>Parking:</strong> "Free parking is available in the lot behind our building. Street parking is also available."</li>

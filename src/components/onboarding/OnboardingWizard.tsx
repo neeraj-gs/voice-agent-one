@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Legend } from '../system/primitives';
 import {
   Building2,
   Stethoscope,
@@ -35,6 +36,7 @@ import {
   Calendar,
   CalendarCheck,
   Search,
+  X,
   Heart,
   Baby,
   Eye,
@@ -509,60 +511,63 @@ export const OnboardingWizard: React.FC = () => {
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <div className="border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Voice Agent Setup</h1>
-              <p className="text-sm text-slate-400">Configure your AI assistant in minutes</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-ink">
+      {/* Top plate */}
+      <div className="sticky top-0 z-40 border-b border-edge-soft bg-ink/92 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
+          <Link to="/businesses" className="flex items-baseline gap-2 outline-offset-4">
+            <span className="display-lite text-[14px] text-bone">Voice Agent</span>
+            <span className="readout text-[14px] text-amber">One</span>
+          </Link>
+          <span aria-hidden className="hidden h-4 w-px bg-edge sm:block" />
+          <Legend className="hidden sm:block">Setting up a business</Legend>
+          <span aria-hidden className="h-px flex-1 bg-edge-soft" />
+          <span className="readout text-[10px] text-bone-faint">
+            Step {step} of {STEPS.length}
+          </span>
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          {STEPS.map((s, index) => (
-            <React.Fragment key={s.id}>
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    'w-12 h-12 rounded-full flex items-center justify-center transition-all',
-                    step > s.id
-                      ? 'bg-green-500 text-white'
-                      : step === s.id
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-700 text-slate-400'
-                  )}
-                >
-                  {step > s.id ? <Check size={20} /> : <s.icon size={20} />}
-                </div>
+      {/* Transport: a tape counter, not a row of circles. These numbers are a
+          real position in a real sequence, which is the only case where
+          numbering earns its place. */}
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <ol className="mb-10 grid grid-cols-5 gap-px bg-edge-soft">
+          {STEPS.map((s) => {
+            const done = step > s.id;
+            const here = step === s.id;
+            return (
+              <li key={s.id} className="relative bg-ink">
                 <span
+                  aria-hidden
                   className={cn(
-                    'mt-2 text-xs font-medium',
-                    step >= s.id ? 'text-white' : 'text-slate-500'
-                  )}
-                >
-                  {s.title}
-                </span>
-              </div>
-              {index < STEPS.length - 1 && (
-                <div
-                  className={cn(
-                    'flex-1 h-0.5 mx-2',
-                    step > s.id ? 'bg-green-500' : 'bg-slate-700'
+                    'absolute inset-x-0 top-0 h-px transition-colors duration-300',
+                    here ? 'bg-amber' : done ? 'bg-patina' : 'bg-edge'
                   )}
                 />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+                <div className="flex items-center gap-2 px-2 py-3.5 sm:px-3">
+                  <span
+                    className={cn(
+                      'readout text-[11px] transition-colors',
+                      here ? 'text-amber' : done ? 'text-patina-glow' : 'text-bone-faint'
+                    )}
+                  >
+                    {String(s.id).padStart(2, '0')}
+                  </span>
+                  {done && <Check size={11} className="shrink-0 text-patina" />}
+                  <span
+                    className={cn(
+                      'hidden truncate font-mono text-[10px] uppercase tracking-[0.14em] transition-colors sm:block',
+                      here ? 'text-bone' : 'text-bone-faint'
+                    )}
+                  >
+                    {s.title}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
 
         {/* Step Content */}
         <AnimatePresence mode="wait">
@@ -576,128 +581,83 @@ export const OnboardingWizard: React.FC = () => {
             {/* Step 1: Product Type Selection */}
             {step === 1 && (
               <div>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    What would you like to create?
+                <div className="mb-8 max-w-2xl border-b border-edge-soft pb-5">
+                  <h2 className="display text-[clamp(1.5rem,3.2vw,2.25rem)] mb-3">
+                    What are we building?
                   </h2>
-                  <p className="text-slate-400">
-                    Choose the product that best fits your needs
+                  <p className="text-bone-dim">
+                    Both give you a working voice agent. The only question is whether you also need a website to put it on.
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                  {/* Website + Voice Agent Option */}
-                  <Card
-                    hover
-                    onClick={() => setProductType('website_and_agent')}
-                    className={cn(
-                      'transition-all cursor-pointer p-6',
-                      productType === 'website_and_agent'
-                        ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500'
-                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-                    )}
-                  >
-                    <CardContent className="p-0">
-                      <div className="flex flex-col items-center text-center">
-                        <div
-                          className={cn(
-                            'w-16 h-16 rounded-2xl mb-4 flex items-center justify-center',
-                            productType === 'website_and_agent'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-slate-700 text-slate-300'
-                          )}
-                        >
-                          <Monitor size={32} />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Website + Voice Agent</h3>
-                        <p className="text-slate-400 text-sm mb-4">
-                          Get a complete landing page with an integrated AI voice assistant
-                        </p>
-                        <ul className="text-left text-sm space-y-2 text-slate-300">
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            Professional landing page
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            AI-powered voice agent
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            Public shareable URL
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            Mobile responsive
-                          </li>
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Two positions on a routing switch. Left-aligned like every
+                    other choice in the app; the lit lamp is the selection. */}
+                <div
+                  role="radiogroup"
+                  aria-label="What to create"
+                  className="grid gap-px bg-edge-soft md:grid-cols-2"
+                >
+                  {[
+                    {
+                      id: 'website_and_agent' as const,
+                      title: 'Site and agent',
+                      body: 'You do not have a website yet. We generate one and put the agent inside it.',
+                      points: [
+                        'A generated business site',
+                        'The voice agent built in',
+                        'A public link you can share',
+                        'Reads well on a phone',
+                      ],
+                    },
+                    {
+                      id: 'agent_only' as const,
+                      title: 'Agent only',
+                      body: 'You already have a website. Take the embed code and paste it in.',
+                      points: [
+                        'The voice agent on its own',
+                        'A dashboard to test and edit it',
+                        'Embed code for any site',
+                        'React, Next.js, Shopify',
+                      ],
+                    },
+                  ].map((opt) => {
+                    const on = productType === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => setProductType(opt.id)}
+                        className={cn(
+                          'flex flex-col items-start p-6 text-left transition-colors',
+                          on ? 'bg-steel ring-1 ring-inset ring-amber/40' : 'bg-ink hover:bg-steel-lift'
+                        )}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className={cn('lamp', on && 'lamp-on')}
+                            aria-hidden
+                          />
+                          <span className="display-lite text-[15px] text-bone">{opt.title}</span>
+                        </span>
 
-                  {/* Voice Agent Only Option */}
-                  <Card
-                    hover
-                    onClick={() => setProductType('agent_only')}
-                    className={cn(
-                      'transition-all cursor-pointer p-6',
-                      productType === 'agent_only'
-                        ? 'ring-2 ring-purple-500 bg-purple-500/10 border-purple-500'
-                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-                    )}
-                  >
-                    <CardContent className="p-0">
-                      <div className="flex flex-col items-center text-center">
-                        <div
-                          className={cn(
-                            'w-16 h-16 rounded-2xl mb-4 flex items-center justify-center',
-                            productType === 'agent_only'
-                              ? 'bg-purple-500 text-white'
-                              : 'bg-slate-700 text-slate-300'
-                          )}
-                        >
-                          <Sparkles size={32} />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Voice Agent Only</h3>
-                        <p className="text-slate-400 text-sm mb-4">
-                          Get just the voice agent to embed in your existing website
-                        </p>
-                        <ul className="text-left text-sm space-y-2 text-slate-300">
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            AI-powered voice agent
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            Test & edit dashboard
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            Embed code for any site
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check size={16} className="text-green-400" />
-                            React, Next.js, Shopify
-                          </li>
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <span className="mt-3 max-w-sm text-[14px] leading-relaxed text-bone-dim">
+                          {opt.body}
+                        </span>
+
+                        <span className="mt-5 w-full space-y-2 border-t border-edge-soft pt-4">
+                          {opt.points.map((p) => (
+                            <span key={p} className="flex items-start gap-2.5 text-[13.5px] text-bone-dim">
+                              <Check size={13} className="mt-1 shrink-0 text-patina" />
+                              {p}
+                            </span>
+                          ))}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {productType && (
-                  <div className="mt-6 text-center">
-                    <span className={cn(
-                      'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm',
-                      productType === 'website_and_agent'
-                        ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400'
-                        : 'bg-purple-500/20 border border-purple-500/30 text-purple-400'
-                    )}>
-                      <Check size={16} />
-                      {productType === 'website_and_agent' ? 'Website + Voice Agent' : 'Voice Agent Only'} selected
-                    </span>
-                  </div>
-                )}
               </div>
             )}
 
@@ -717,94 +677,101 @@ export const OnboardingWizard: React.FC = () => {
 
               return (
                 <div>
-                  <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-white mb-2">
-                      What type of business do you have?
+                  <div className="mb-8 max-w-2xl border-b border-edge-soft pb-5">
+                    <h2 className="display text-[clamp(1.5rem,3.2vw,2.25rem)] mb-3">
+                      What trade are you in?
                     </h2>
-                    <p className="text-slate-400">
-                      Search or select your industry to customize your AI assistant
+                    <p className="text-bone-dim">
+                      This sets the vocabulary the agent uses &mdash; patients, guests, clients, jobs &mdash;
+                      along with the services and tone it starts from.
                     </p>
                   </div>
 
-                  {/* Search Input */}
-                  <div className="relative mb-6 max-w-md mx-auto">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                  {/* Search */}
+                  <div className="relative mb-6 max-w-md">
+                    <Search
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-bone-faint"
+                      size={15}
+                    />
                     <input
                       type="text"
-                      placeholder="Search industries... (e.g., dental, yoga, plumbing)"
+                      aria-label="Search trades"
+                      placeholder="Search — dental, yoga, plumbing…"
                       value={industrySearch}
                       onChange={(e) => setIndustrySearch(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full rounded-panel border border-edge bg-ink py-2.5 pl-10 pr-9 text-[15px] text-bone shadow-recess placeholder:text-bone-faint caret-amber transition-colors focus:border-amber focus:outline-none"
                     />
                     {industrySearch && (
                       <button
                         onClick={() => setIndustrySearch('')}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xl"
+                        aria-label="Clear search"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-bone-faint transition-colors hover:text-amber"
                       >
-                        ×
+                        <X size={14} />
                       </button>
                     )}
                   </div>
 
-                  {/* Selected Industry Badge */}
-                  {selectedIndustryLabel && (
-                    <div className="mb-4 text-center">
-                      <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-400 text-sm">
-                        <Check size={16} />
-                        Selected: {selectedIndustryLabel}
+                  {/* Result count and current selection sit on one status line
+                      rather than as a floating pill. */}
+                  <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-edge-soft pb-2">
+                    <Legend>
+                      {showNoResultsMessage
+                        ? `Nothing matches “${industrySearch}” — showing everything`
+                        : `${displayIndustries.length} of ${INDUSTRIES.length} trades`}
+                    </Legend>
+                    <span aria-hidden className="hidden h-px flex-1 bg-edge-soft sm:block" />
+                    {selectedIndustryLabel && (
+                      <span className="flex items-center gap-2">
+                        <span className="lamp lamp-on" aria-hidden />
+                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber">
+                          {selectedIndustryLabel}
+                        </span>
                       </span>
-                    </div>
-                  )}
-
-                  {/* No Results Message */}
-                  {showNoResultsMessage && (
-                    <div className="text-center py-3 mb-4 bg-slate-800/50 rounded-xl border border-slate-700">
-                      <p className="text-slate-400 text-sm">
-                        No exact match for "{industrySearch}". Showing all industries.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Industry Grid - Single scrollable container */}
-                  <div className="max-h-[45vh] overflow-y-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {displayIndustries.map((ind, index) => (
-                        <Card
-                          key={`${ind.label}-${index}`}
-                          hover
-                          onClick={() => {
-                            setIndustry(ind.value);
-                            setSelectedIndustryLabel(ind.label);
-                          }}
-                          className={cn(
-                            'transition-all cursor-pointer',
-                            selectedIndustryLabel === ind.label
-                              ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500'
-                              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
-                          )}
-                        >
-                          <CardContent className="p-3 text-center">
-                            <div
-                              className={cn(
-                                'w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center',
-                                selectedIndustryLabel === ind.label
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-slate-700 text-slate-300'
-                              )}
-                            >
-                              {ind.icon}
-                            </div>
-                            <h3 className="font-semibold text-white text-xs">{ind.label}</h3>
-                            <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{ind.description}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                    )}
                   </div>
 
-                  {/* Industry count */}
-                  <div className="text-center mt-4 text-slate-500 text-xs">
-                    Showing {displayIndustries.length} of {INDUSTRIES.length} industries
+                  {/* A typeset index, not a grid of icon tiles. A hundred
+                      trades scan far faster as a list than as boxes. */}
+                  <div className="max-h-[46vh] overflow-y-auto">
+                    <ul
+                      role="listbox"
+                      aria-label="Trades"
+                      className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3"
+                    >
+                      {displayIndustries.map((ind, index) => {
+                        const on = selectedIndustryLabel === ind.label;
+                        return (
+                          <li key={`${ind.label}-${index}`}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={on}
+                              onClick={() => {
+                                setIndustry(ind.value);
+                                setSelectedIndustryLabel(ind.label);
+                              }}
+                              className={cn(
+                                'flex w-full items-baseline gap-3 border-b border-edge-soft py-2.5 pr-2 text-left transition-colors',
+                                on ? 'text-amber' : 'text-bone-dim hover:text-bone'
+                              )}
+                            >
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-jack transition-colors',
+                                  on ? 'bg-amber' : 'bg-edge-bright'
+                                )}
+                              />
+                              <span className="min-w-0 flex-1 truncate text-[14px]">{ind.label}</span>
+                              <span className="hidden truncate font-mono text-[10px] text-bone-faint xl:block xl:max-w-[11rem]">
+                                {ind.description}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
                 </div>
               );
@@ -813,22 +780,22 @@ export const OnboardingWizard: React.FC = () => {
             {/* Step 3: Business Info */}
             {step === 3 && (
               <div>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    Tell us about your business
+                <div className="mb-8 max-w-2xl border-b border-edge-soft pb-5">
+                  <h2 className="display text-[clamp(1.5rem,3.2vw,2.25rem)] mb-3">
+                    Your business details
                   </h2>
-                  <p className="text-slate-400">
-                    This information will be used to personalize your AI assistant
+                  <p className="text-bone-dim">
+                    The agent answers as your business, so it needs to know who it is answering for. About two minutes of typing.
                   </p>
                 </div>
 
-                <Card className="bg-slate-800/50 border-slate-700">
+                <Card className="bg-steel border-edge-soft">
                   <CardContent className="p-6 space-y-6">
                     {/* Business Details */}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <Building2 size={18} className="text-blue-400" />
-                        <h3 className="font-semibold text-white">Business Details</h3>
+                        <Building2 size={18} className="text-amber" />
+                        <h3 className="font-semibold text-bone">Business Details</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
@@ -836,21 +803,21 @@ export const OnboardingWizard: React.FC = () => {
                           placeholder="Premier Realty Group"
                           value={businessInfo.name || ''}
                           onChange={(e) => handleBusinessInfoChange('name', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Website"
                           placeholder="https://example.com"
                           value={businessInfo.website || ''}
                           onChange={(e) => handleBusinessInfoChange('website', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Phone *"
                           placeholder="+1 (555) 123-4567"
                           value={businessInfo.phone || ''}
                           onChange={(e) => handleBusinessInfoChange('phone', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Email *"
@@ -858,7 +825,7 @@ export const OnboardingWizard: React.FC = () => {
                           placeholder="contact@example.com"
                           value={businessInfo.email || ''}
                           onChange={(e) => handleBusinessInfoChange('email', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                       </div>
                     </div>
@@ -866,8 +833,8 @@ export const OnboardingWizard: React.FC = () => {
                     {/* Location */}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <MapPin size={18} className="text-blue-400" />
-                        <h3 className="font-semibold text-white">Location</h3>
+                        <MapPin size={18} className="text-amber" />
+                        <h3 className="font-semibold text-bone">Location</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
@@ -875,28 +842,28 @@ export const OnboardingWizard: React.FC = () => {
                           placeholder="123 Main Street"
                           value={businessInfo.street || ''}
                           onChange={(e) => handleBusinessInfoChange('street', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="City *"
                           placeholder="Austin"
                           value={businessInfo.city || ''}
                           onChange={(e) => handleBusinessInfoChange('city', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="State *"
                           placeholder="TX"
                           value={businessInfo.state || ''}
                           onChange={(e) => handleBusinessInfoChange('state', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="ZIP Code"
                           placeholder="78701"
                           value={businessInfo.zip || ''}
                           onChange={(e) => handleBusinessInfoChange('zip', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                       </div>
                     </div>
@@ -904,8 +871,8 @@ export const OnboardingWizard: React.FC = () => {
                     {/* Staff */}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <User size={18} className="text-blue-400" />
-                        <h3 className="font-semibold text-white">Primary Contact</h3>
+                        <User size={18} className="text-amber" />
+                        <h3 className="font-semibold text-bone">Primary Contact</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
@@ -913,14 +880,14 @@ export const OnboardingWizard: React.FC = () => {
                           placeholder="Jennifer Hayes"
                           value={businessInfo.staffName || ''}
                           onChange={(e) => handleBusinessInfoChange('staffName', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Title *"
                           placeholder="Lead Broker & Owner"
                           value={businessInfo.staffTitle || ''}
                           onChange={(e) => handleBusinessInfoChange('staffTitle', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                       </div>
                     </div>
@@ -928,8 +895,8 @@ export const OnboardingWizard: React.FC = () => {
                     {/* Hours */}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <Clock size={18} className="text-blue-400" />
-                        <h3 className="font-semibold text-white">Business Hours</h3>
+                        <Clock size={18} className="text-amber" />
+                        <h3 className="font-semibold text-bone">Business Hours</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
@@ -937,21 +904,21 @@ export const OnboardingWizard: React.FC = () => {
                           placeholder="9:00 AM - 6:00 PM"
                           value={businessInfo.weekdayHours || ''}
                           onChange={(e) => handleBusinessInfoChange('weekdayHours', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Saturday"
                           placeholder="10:00 AM - 4:00 PM"
                           value={businessInfo.saturdayHours || ''}
                           onChange={(e) => handleBusinessInfoChange('saturdayHours', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                         <Input
                           label="Sunday"
                           placeholder="Closed"
                           value={businessInfo.sundayHours || ''}
                           onChange={(e) => handleBusinessInfoChange('sundayHours', e.target.value)}
-                          className="bg-slate-900 border-slate-600 text-white"
+                          className="bg-ink border-edge text-bone"
                         />
                       </div>
                     </div>
@@ -963,28 +930,28 @@ export const OnboardingWizard: React.FC = () => {
             {/* Step 4: API Keys */}
             {step === 4 && (
               <div>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    Connect your services
+                <div className="mb-8 max-w-2xl border-b border-edge-soft pb-5">
+                  <h2 className="display text-[clamp(1.5rem,3.2vw,2.25rem)] mb-3">
+                    Your API keys
                   </h2>
-                  <p className="text-slate-400">
-                    Enter your API keys to enable AI features
+                  <p className="text-bone-dim">
+                    OpenAI writes the content, ElevenLabs supplies the voice. Both keys stay in this browser and never reach our servers.
                   </p>
                 </div>
 
                 <div className="space-y-6">
                   {/* OpenAI - Required */}
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-steel border-edge-soft">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Key size={18} className="text-amber-400" />
-                          <h3 className="font-semibold text-white">AI Content Generation</h3>
+                          <Key size={18} className="text-amber" />
+                          <h3 className="font-semibold text-bone">AI Content Generation</h3>
                         </div>
                         <button
                           type="button"
                           onClick={() => setShowOpenAIHelp(!showOpenAIHelp)}
-                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          className="flex items-center gap-1 text-xs text-amber hover:text-amber transition-colors"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -997,17 +964,17 @@ export const OnboardingWizard: React.FC = () => {
 
                       {/* OpenAI Help Guide */}
                       {showOpenAIHelp && (
-                        <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                          <h4 className="text-sm font-semibold text-blue-400 mb-2">How to get your OpenAI API Key:</h4>
-                          <ol className="text-sm text-slate-300 space-y-2 list-decimal list-inside">
-                            <li>Go to <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">platform.openai.com</a></li>
+                        <div className="mb-4 p-4 bg-amber-shadow border border-amber/40 rounded-panel">
+                          <h4 className="text-sm font-semibold text-amber mb-2">How to get your OpenAI API Key:</h4>
+                          <ol className="text-sm text-bone-dim space-y-2 list-decimal list-inside">
+                            <li>Go to <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-amber hover:underline">platform.openai.com</a></li>
                             <li>Sign in or create an account</li>
                             <li>Click on your profile icon (top right) → "View API keys"</li>
                             <li>Click "Create new secret key"</li>
-                            <li>Copy the key (starts with <code className="bg-slate-800 px-1 rounded">sk-</code>)</li>
+                            <li>Copy the key (starts with <code className="bg-steel px-1 rounded-panel">sk-</code>)</li>
                             <li>Add billing details if you haven't already</li>
                           </ol>
-                          <p className="text-xs text-slate-400 mt-3">
+                          <p className="text-xs text-bone-dim mt-3">
                             Note: You need to add payment method and have credits to use the API.
                           </p>
                         </div>
@@ -1020,23 +987,23 @@ export const OnboardingWizard: React.FC = () => {
                         hint="Used for AI content generation"
                         value={apiKeys.openaiKey || ''}
                         onChange={(e) => handleAPIKeyChange('openaiKey', e.target.value)}
-                        className="bg-slate-900 border-slate-600 text-white"
+                        className="bg-ink border-edge text-bone"
                       />
                     </CardContent>
                   </Card>
 
                   {/* ElevenLabs */}
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-steel border-edge-soft">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Sparkles size={18} className="text-purple-400" />
-                          <h3 className="font-semibold text-white">Voice Agent Setup</h3>
+                          <Sparkles size={18} className="text-patina-glow" />
+                          <h3 className="font-semibold text-bone">Voice Agent Setup</h3>
                         </div>
                         <button
                           type="button"
                           onClick={() => setShowElevenLabsHelp(!showElevenLabsHelp)}
-                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          className="flex items-center gap-1 text-xs text-amber hover:text-amber transition-colors"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -1049,23 +1016,23 @@ export const OnboardingWizard: React.FC = () => {
 
                       {/* ElevenLabs Help Guide */}
                       {showElevenLabsHelp && (
-                        <div className="mb-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                          <h4 className="text-sm font-semibold text-purple-400 mb-2">How to get your ElevenLabs API Key:</h4>
-                          <ol className="text-sm text-slate-300 space-y-2 list-decimal list-inside">
-                            <li>Go to <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">elevenlabs.io</a></li>
+                        <div className="mb-4 p-4 bg-patina-shadow border border-patina/40 rounded-panel">
+                          <h4 className="text-sm font-semibold text-patina-glow mb-2">How to get your ElevenLabs API Key:</h4>
+                          <ol className="text-sm text-bone-dim space-y-2 list-decimal list-inside">
+                            <li>Go to <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="text-patina-glow hover:underline">elevenlabs.io</a></li>
                             <li>Sign in or create an account</li>
                             <li>Click on your profile icon (bottom left)</li>
                             <li>Select "Profile + API key"</li>
-                            <li>Copy your API key (starts with <code className="bg-slate-800 px-1 rounded">sk_</code>)</li>
+                            <li>Copy your API key (starts with <code className="bg-steel px-1 rounded-panel">sk_</code>)</li>
                           </ol>
-                          <p className="text-xs text-slate-400 mt-3">
+                          <p className="text-xs text-bone-dim mt-3">
                             Note: Free tier has limited usage. Upgrade for more minutes.
                           </p>
                         </div>
                       )}
 
-                      <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg mb-4">
-                        <p className="text-sm text-purple-300">
+                      <div className="p-3 bg-patina-shadow border border-patina/40 rounded-panel mb-4">
+                        <p className="text-sm text-bone-dim">
                           We'll automatically create a voice agent configured with your business info and prompts.
                         </p>
                       </div>
@@ -1077,72 +1044,72 @@ export const OnboardingWizard: React.FC = () => {
                         hint="Your API key from elevenlabs.io"
                         value={apiKeys.elevenLabsApiKey || ''}
                         onChange={(e) => handleAPIKeyChange('elevenLabsApiKey', e.target.value)}
-                        className="bg-slate-900 border-slate-600 text-white"
+                        className="bg-ink border-edge text-bone"
                       />
 
                       {/* n8n Webhook Tools */}
-                      <div className="mt-6 pt-4 border-t border-slate-700">
+                      <div className="mt-6 pt-4 border-t border-edge-soft">
                         <div className="flex items-center gap-2 mb-3">
                           <Webhook size={16} className="text-orange-400" />
-                          <h4 className="text-sm font-medium text-white">n8n Webhook Tools (Optional)</h4>
+                          <h4 className="text-sm font-medium text-bone">n8n Webhook Tools (Optional)</h4>
                         </div>
-                        <p className="text-xs text-slate-400 mb-4">
+                        <p className="text-xs text-bone-dim mb-4">
                           Add your n8n webhook URLs to enable the agent to check availability and book appointments.
                         </p>
 
                         <div className="space-y-3">
                           {/* Check History Tool */}
-                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                            <History size={18} className="text-blue-400 mt-2 flex-shrink-0" />
+                          <div className="flex items-start gap-3 p-3 bg-ink/50 rounded-panel">
+                            <History size={18} className="text-amber mt-2 flex-shrink-0" />
                             <div className="flex-1">
-                              <label className="text-sm font-medium text-white block mb-1">
+                              <label className="text-sm font-medium text-bone block mb-1">
                                 Check History
                               </label>
                               <Input
                                 placeholder="https://your-n8n.com/webhook/check-history"
                                 value={webhookTools.find((t) => t.id === 'check_history')?.url || ''}
                                 onChange={(e) => handleWebhookToolChange('check_history', 'url', e.target.value)}
-                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                                className="bg-steel border-edge text-bone text-sm"
                               />
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="text-xs text-bone-faint mt-1">
                                 Fetches customer/patient history from your database
                               </p>
                             </div>
                           </div>
 
                           {/* Check Availability Tool */}
-                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                            <Calendar size={18} className="text-green-400 mt-2 flex-shrink-0" />
+                          <div className="flex items-start gap-3 p-3 bg-ink/50 rounded-panel">
+                            <Calendar size={18} className="text-patina-glow mt-2 flex-shrink-0" />
                             <div className="flex-1">
-                              <label className="text-sm font-medium text-white block mb-1">
+                              <label className="text-sm font-medium text-bone block mb-1">
                                 Check Availability
                               </label>
                               <Input
                                 placeholder="https://your-n8n.com/webhook/check-availability"
                                 value={webhookTools.find((t) => t.id === 'check_availability')?.url || ''}
                                 onChange={(e) => handleWebhookToolChange('check_availability', 'url', e.target.value)}
-                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                                className="bg-steel border-edge text-bone text-sm"
                               />
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="text-xs text-bone-faint mt-1">
                                 Checks available appointment slots based on date/time
                               </p>
                             </div>
                           </div>
 
                           {/* Book Appointment Tool */}
-                          <div className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                            <CalendarCheck size={18} className="text-purple-400 mt-2 flex-shrink-0" />
+                          <div className="flex items-start gap-3 p-3 bg-ink/50 rounded-panel">
+                            <CalendarCheck size={18} className="text-patina-glow mt-2 flex-shrink-0" />
                             <div className="flex-1">
-                              <label className="text-sm font-medium text-white block mb-1">
+                              <label className="text-sm font-medium text-bone block mb-1">
                                 Book Appointment
                               </label>
                               <Input
                                 placeholder="https://your-n8n.com/webhook/book-appointment"
                                 value={webhookTools.find((t) => t.id === 'book_appointment')?.url || ''}
                                 onChange={(e) => handleWebhookToolChange('book_appointment', 'url', e.target.value)}
-                                className="bg-slate-800 border-slate-600 text-white text-sm"
+                                className="bg-steel border-edge text-bone text-sm"
                               />
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="text-xs text-bone-faint mt-1">
                                 Books an appointment with customer details
                               </p>
                             </div>
@@ -1158,32 +1125,32 @@ export const OnboardingWizard: React.FC = () => {
             {/* Step 5: Generate & Review */}
             {step === 5 && (
               <div>
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    {generatedConfig ? 'Review your configuration' : 'Generate your AI content'}
+                <div className="mb-8 max-w-2xl border-b border-edge-soft pb-5">
+                  <h2 className="display text-[clamp(1.5rem,3.2vw,2.25rem)] mb-3">
+                    {generatedConfig ? 'Check it over' : 'Generate your AI content'}
                   </h2>
-                  <p className="text-slate-400">
+                  <p className="text-bone-dim">
                     {generatedConfig
-                      ? 'Review and customize the generated content'
+                      ? 'Everything below is editable, including what the agent says and what it refuses to promise.'
                       : 'Our AI will create personalized content for your business'}
                   </p>
                 </div>
 
                 {!generatedConfig && !isGenerating && (
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-steel border-edge-soft">
                     <CardContent className="p-12 text-center">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6">
-                        <Sparkles className="w-10 h-10 text-white" />
+                      <div className="w-20 h-20 rounded-full bg-amber text-ink flex items-center justify-center mx-auto mb-6">
+                        <Sparkles className="w-10 h-10 text-bone" />
                       </div>
-                      <h3 className="text-xl font-semibold text-white mb-2">
+                      <h3 className="text-xl font-semibold text-bone mb-2">
                         Ready to generate?
                       </h3>
-                      <p className="text-slate-400 mb-6 max-w-md mx-auto">
+                      <p className="text-bone-dim mb-6 max-w-md mx-auto">
                         We'll use AI to create a customized website, voice agent prompts,
                         services, FAQs, and branding for {businessInfo.name}.
                       </p>
                       {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                        <div className="mb-6 p-4 bg-clip/10 border border-clip-deep rounded-panel text-clip text-sm">
                           {error}
                         </div>
                       )}
@@ -1196,13 +1163,13 @@ export const OnboardingWizard: React.FC = () => {
                 )}
 
                 {isGenerating && (
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-steel border-edge-soft">
                     <CardContent className="p-12 text-center">
-                      <Loader2 className="w-16 h-16 text-blue-500 animate-spin mx-auto mb-6" />
-                      <h3 className="text-xl font-semibold text-white mb-2">
+                      <Loader2 className="w-16 h-16 text-amber animate-spin mx-auto mb-6" />
+                      <h3 className="text-xl font-semibold text-bone mb-2">
                         Generating your content...
                       </h3>
-                      <p className="text-slate-400">
+                      <p className="text-bone-dim">
                         This may take 10-20 seconds
                       </p>
                     </CardContent>
@@ -1228,7 +1195,7 @@ export const OnboardingWizard: React.FC = () => {
             variant="ghost"
             onClick={prevStep}
             disabled={step === 1}
-            className="text-slate-400 hover:text-white"
+            className="text-bone-dim hover:text-bone"
           >
             <ArrowLeft size={18} className="mr-2" />
             Back
@@ -1252,7 +1219,7 @@ export const OnboardingWizard: React.FC = () => {
           {step === 5 && generatedConfig && (
             <div className="flex flex-col items-end gap-2">
               {agentCreationError && (
-                <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
+                <div className="text-sm text-clip bg-clip/10 border border-clip-deep rounded-panel px-4 py-2">
                   {agentCreationError}
                 </div>
               )}

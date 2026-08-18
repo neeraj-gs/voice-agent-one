@@ -356,15 +356,15 @@ export const VoiceAgentSettingsPage: React.FC = () => {
 
   if (!activeBusiness) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-ink">
         <Header />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-            <p className="text-white">No business selected</p>
+            <AlertCircle className="w-12 h-12 text-amber mx-auto mb-4" />
+            <p className="text-bone">No business selected</p>
             <button
               onClick={() => navigate('/businesses')}
-              className="mt-4 px-4 py-2 bg-blue-500 rounded-lg text-white"
+              className="mt-4 px-4 py-2 bg-amber rounded-panel text-ink"
             >
               Select a Business
             </button>
@@ -375,15 +375,15 @@ export const VoiceAgentSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-ink">
       <Header />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Voice Agent Settings</h1>
-            <p className="text-slate-400">
+            <h1 className="display text-[clamp(1.75rem,4vw,2.5rem)] mb-3">Voice Agent Settings</h1>
+            <p className="text-bone-dim">
               Customize your AI assistant for {activeBusiness.name}
             </p>
           </div>
@@ -391,12 +391,12 @@ export const VoiceAgentSettingsPage: React.FC = () => {
             onClick={handleSave}
             disabled={isSaving}
             className={cn(
-              'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all',
+              'flex items-center gap-2 px-5 py-2.5 rounded-panel font-semibold transition-all',
               isSaving
-                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                ? 'bg-steel-high text-bone-dim cursor-not-allowed'
                 : saveSuccess
-                ? 'bg-green-500 text-white'
-                : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
+                ? 'bg-patina text-ink'
+                : 'bg-amber text-ink hover:bg-amber-glow'
             )}
           >
             {isSaving ? (
@@ -423,7 +423,7 @@ export const VoiceAgentSettingsPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 flex items-center gap-3"
+            className="mb-6 p-4 bg-amber-shadow border border-amber/40 rounded-panel text-amber flex items-center gap-3"
           >
             <Loader2 size={20} className="animate-spin" />
             Loading agent data from ElevenLabs...
@@ -435,7 +435,7 @@ export const VoiceAgentSettingsPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 flex items-center gap-3"
+            className="mb-6 p-4 bg-clip/10 border border-clip-deep rounded-panel text-clip flex items-center gap-3"
           >
             <AlertCircle size={20} />
             {error}
@@ -445,46 +445,46 @@ export const VoiceAgentSettingsPage: React.FC = () => {
         {/* Settings Sections */}
         <div className="space-y-4">
           {/* Agent Identity */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="bg-steel border border-edge-soft rounded-panel overflow-hidden">
             <button
               onClick={() => toggleSection('agent')}
               className="w-full flex items-center justify-between p-5 text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <Bot size={20} className="text-blue-400" />
+                <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                  <Bot size={20} className="text-amber" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Agent Identity</h3>
-                  <p className="text-sm text-slate-400">Name and personality</p>
+                  <h3 className="text-bone font-semibold">Agent Identity</h3>
+                  <p className="text-sm text-bone-dim">Name and personality</p>
                 </div>
               </div>
               {expandedSections.includes('agent') ? (
-                <ChevronUp size={20} className="text-slate-400" />
+                <ChevronUp size={20} className="text-bone-dim" />
               ) : (
-                <ChevronDown size={20} className="text-slate-400" />
+                <ChevronDown size={20} className="text-bone-dim" />
               )}
             </button>
             {expandedSections.includes('agent') && (
               <div className="px-5 pb-5 space-y-4">
                 <div>
-                  <label className="block text-sm text-slate-300 mb-2">Agent Name</label>
+                  <label className="block text-sm text-bone-dim mb-2">Agent Name</label>
                   <input
                     type="text"
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
                     placeholder="e.g., Sarah, Alex, or your business name"
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-ink border border-edge rounded-panel text-bone placeholder:text-bone-faint focus:outline-none focus:ring-2 focus:ring-amber/40"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-2">Personality</label>
+                  <label className="block text-sm text-bone-dim mb-2">Personality</label>
                   <input
                     type="text"
                     value={personality}
                     onChange={(e) => setPersonality(e.target.value)}
                     placeholder="e.g., professional, friendly, energetic"
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-ink border border-edge rounded-panel text-bone placeholder:text-bone-faint focus:outline-none focus:ring-2 focus:ring-amber/40"
                   />
                 </div>
               </div>
@@ -492,24 +492,24 @@ export const VoiceAgentSettingsPage: React.FC = () => {
           </div>
 
           {/* First Message */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="bg-steel border border-edge-soft rounded-panel overflow-hidden">
             <button
               onClick={() => toggleSection('greeting')}
               className="w-full flex items-center justify-between p-5 text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                  <MessageSquare size={20} className="text-green-400" />
+                <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                  <MessageSquare size={20} className="text-patina-glow" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Greeting Message</h3>
-                  <p className="text-sm text-slate-400">First thing the agent says</p>
+                  <h3 className="text-bone font-semibold">Greeting Message</h3>
+                  <p className="text-sm text-bone-dim">First thing the agent says</p>
                 </div>
               </div>
               {expandedSections.includes('greeting') ? (
-                <ChevronUp size={20} className="text-slate-400" />
+                <ChevronUp size={20} className="text-bone-dim" />
               ) : (
-                <ChevronDown size={20} className="text-slate-400" />
+                <ChevronDown size={20} className="text-bone-dim" />
               )}
             </button>
             {expandedSections.includes('greeting') && (
@@ -519,31 +519,31 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                   onChange={(e) => setFirstMessage(e.target.value)}
                   rows={3}
                   placeholder="Hi! Thanks for calling..."
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-3 bg-ink border border-edge rounded-panel text-bone placeholder:text-bone-faint focus:outline-none focus:ring-2 focus:ring-amber/40 resize-none"
                 />
               </div>
             )}
           </div>
 
           {/* System Prompt */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="bg-steel border border-edge-soft rounded-panel overflow-hidden">
             <button
               onClick={() => toggleSection('prompt')}
               className="w-full flex items-center justify-between p-5 text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Sparkles size={20} className="text-purple-400" />
+                <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                  <Sparkles size={20} className="text-patina-glow" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">System Prompt</h3>
-                  <p className="text-sm text-slate-400">Agent behavior instructions</p>
+                  <h3 className="text-bone font-semibold">System Prompt</h3>
+                  <p className="text-sm text-bone-dim">Agent behavior instructions</p>
                 </div>
               </div>
               {expandedSections.includes('prompt') ? (
-                <ChevronUp size={20} className="text-slate-400" />
+                <ChevronUp size={20} className="text-bone-dim" />
               ) : (
-                <ChevronDown size={20} className="text-slate-400" />
+                <ChevronDown size={20} className="text-bone-dim" />
               )}
             </button>
             {expandedSections.includes('prompt') && (
@@ -553,9 +553,9 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   rows={10}
                   placeholder="You are a helpful AI assistant..."
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono text-sm"
+                  className="w-full px-4 py-3 bg-ink border border-edge rounded-panel text-bone placeholder:text-bone-faint focus:outline-none focus:ring-2 focus:ring-amber/40 resize-none font-mono text-sm"
                 />
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-bone-faint mt-2">
                   This prompt defines how your voice agent behaves and responds
                 </p>
               </div>
@@ -563,24 +563,24 @@ export const VoiceAgentSettingsPage: React.FC = () => {
           </div>
 
           {/* Services */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="bg-steel border border-edge-soft rounded-panel overflow-hidden">
             <button
               onClick={() => toggleSection('services')}
               className="w-full flex items-center justify-between p-5 text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                  <FileText size={20} className="text-amber-400" />
+                <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                  <FileText size={20} className="text-amber" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Services</h3>
-                  <p className="text-sm text-slate-400">{services.length} services</p>
+                  <h3 className="text-bone font-semibold">Services</h3>
+                  <p className="text-sm text-bone-dim">{services.length} services</p>
                 </div>
               </div>
               {expandedSections.includes('services') ? (
-                <ChevronUp size={20} className="text-slate-400" />
+                <ChevronUp size={20} className="text-bone-dim" />
               ) : (
-                <ChevronDown size={20} className="text-slate-400" />
+                <ChevronDown size={20} className="text-bone-dim" />
               )}
             </button>
             {expandedSections.includes('services') && (
@@ -588,7 +588,7 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                 {services.map((service, index) => (
                   <div
                     key={service.id || index}
-                    className="p-4 bg-slate-900/50 rounded-xl border border-slate-700"
+                    className="p-4 bg-ink/50 rounded-panel border border-edge-soft"
                   >
                     <div className="flex gap-3 mb-3">
                       <input
@@ -596,18 +596,18 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                         value={service.name}
                         onChange={(e) => updateService(index, 'name', e.target.value)}
                         placeholder="Service name"
-                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm"
+                        className="flex-1 px-3 py-2 bg-steel border border-edge rounded-panel text-bone text-sm"
                       />
                       <input
                         type="text"
                         value={service.price}
                         onChange={(e) => updateService(index, 'price', e.target.value)}
                         placeholder="Price"
-                        className="w-24 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm"
+                        className="w-24 px-3 py-2 bg-steel border border-edge rounded-panel text-bone text-sm"
                       />
                       <button
                         onClick={() => removeService(index)}
-                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        className="p-2 text-bone-dim hover:text-clip hover:bg-clip/10 rounded-panel transition-colors"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -617,13 +617,13 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                       onChange={(e) => updateService(index, 'description', e.target.value)}
                       placeholder="Service description"
                       rows={2}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm resize-none"
+                      className="w-full px-3 py-2 bg-steel border border-edge rounded-panel text-bone text-sm resize-none"
                     />
                   </div>
                 ))}
                 <button
                   onClick={addService}
-                  className="w-full py-3 border border-dashed border-slate-600 rounded-xl text-slate-400 hover:text-white hover:border-slate-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 border border-dashed border-edge rounded-panel text-bone-dim hover:text-bone hover:border-edge-bright transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus size={18} />
                   Add Service
@@ -633,24 +633,24 @@ export const VoiceAgentSettingsPage: React.FC = () => {
           </div>
 
           {/* FAQs */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="bg-steel border border-edge-soft rounded-panel overflow-hidden">
             <button
               onClick={() => toggleSection('faqs')}
               className="w-full flex items-center justify-between p-5 text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                  <HelpCircle size={20} className="text-cyan-400" />
+                <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                  <HelpCircle size={20} className="text-patina-glow" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">FAQs</h3>
-                  <p className="text-sm text-slate-400">{faqs.length} questions</p>
+                  <h3 className="text-bone font-semibold">FAQs</h3>
+                  <p className="text-sm text-bone-dim">{faqs.length} questions</p>
                 </div>
               </div>
               {expandedSections.includes('faqs') ? (
-                <ChevronUp size={20} className="text-slate-400" />
+                <ChevronUp size={20} className="text-bone-dim" />
               ) : (
-                <ChevronDown size={20} className="text-slate-400" />
+                <ChevronDown size={20} className="text-bone-dim" />
               )}
             </button>
             {expandedSections.includes('faqs') && (
@@ -658,7 +658,7 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                 {faqs.map((faq, index) => (
                   <div
                     key={index}
-                    className="p-4 bg-slate-900/50 rounded-xl border border-slate-700"
+                    className="p-4 bg-ink/50 rounded-panel border border-edge-soft"
                   >
                     <div className="flex items-start gap-3 mb-3">
                       <input
@@ -666,11 +666,11 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                         value={faq.question}
                         onChange={(e) => updateFaq(index, 'question', e.target.value)}
                         placeholder="Question"
-                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm"
+                        className="flex-1 px-3 py-2 bg-steel border border-edge rounded-panel text-bone text-sm"
                       />
                       <button
                         onClick={() => removeFaq(index)}
-                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        className="p-2 text-bone-dim hover:text-clip hover:bg-clip/10 rounded-panel transition-colors"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -680,13 +680,13 @@ export const VoiceAgentSettingsPage: React.FC = () => {
                       onChange={(e) => updateFaq(index, 'answer', e.target.value)}
                       placeholder="Answer"
                       rows={2}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm resize-none"
+                      className="w-full px-3 py-2 bg-steel border border-edge rounded-panel text-bone text-sm resize-none"
                     />
                   </div>
                 ))}
                 <button
                   onClick={addFaq}
-                  className="w-full py-3 border border-dashed border-slate-600 rounded-xl text-slate-400 hover:text-white hover:border-slate-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 border border-dashed border-edge rounded-panel text-bone-dim hover:text-bone hover:border-edge-bright transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus size={18} />
                   Add FAQ

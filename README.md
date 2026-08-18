@@ -143,17 +143,69 @@ npm run build
 
 ---
 
+## Design
+
+The app runs **two separate design systems**, because it has two audiences.
+
+### The product — "The Signal Room"
+
+Every surface you own as an operator (marketing page, auth, setup wizard, dashboards,
+the call console) is built to read as a piece of professional broadcast equipment:
+anodised graphite panels, machined hairlines, silkscreened legends, and lamps that
+light only when a real state is true.
+
+| Token | Value | Means |
+|-------|-------|-------|
+| `ink` | `#0A0B0D` | the room the rack sits in |
+| `steel` | `#14181C` | the equipment face |
+| `bone` | `#E7E1D4` | silkscreened legend type |
+| `amber` | `#FF9D2E` | signal present · live · primary action |
+| `patina` | `#3E8E7E` | aged copper — structure, ready states |
+| `clip` | `#E5484D` | over level. errors only, never decoration |
+
+Type is **Archivo** (variable, pushed to expanded width and set in caps, the way a
+panel legend is stretched to fill a face), **IBM Plex Sans** for prose, and **IBM Plex
+Mono** for anything a machine printed.
+
+**The signature is a live 3D spectrogram.** The hero renders a real mel-spaced
+waterfall — frequency across, time receding, energy extruded into a terrain — driven
+by a formant-based speech model at rest. Press the key and it switches to your own
+microphone. The call pages render a condenser **diaphragm** whose membrane rides
+standing-wave modes taken from the ElevenLabs SDK's own analyser, so what moves on
+screen is what is actually being said.
+
+### Generated customer sites — "The Docket"
+
+A dentist's website should not look like a rack of audio gear, so generated business
+sites are a separate identity: printed matter. Paper ground, a ruled tariff instead of
+service cards, a stamped seal, a tear-off stub. Display is **Petrona**, body is
+**Instrument Sans**, and the accent is the business's own `branding.primaryColor` —
+pulled into a legible range by luminance so any generated hex stays readable. Only the
+mono readout is shared between the two systems.
+
+### Ground rules
+
+- Responsive to 390px; visible keyboard focus; `prefers-reduced-motion` respected
+  (the spectrogram holds one composed frame rather than freezing mid-animation).
+- No WebGL, or a device that can't afford it, still gets a composed layout.
+- Routes and the renderer are code-split: the marketing page ships ~79 kB gzip before
+  three.js loads on demand.
+
+---
+
 ## Project Structure
 
 ```
 voice-agent-one/
 ├── src/
 │   ├── components/
-│   │   ├── ui/                 # Reusable UI components
+│   │   ├── system/             # Signal Room primitives (Rack, Panel, Lamp, Meter)
+│   │   ├── three/              # Spectrogram, Diaphragm, lazy Canvas host
+│   │   ├── site/               # The Docket — generated customer site system
+│   │   ├── ui/                 # Buttons, fields, panels
 │   │   ├── layout/             # Header, Footer
 │   │   ├── onboarding/         # Setup wizard, Config editor
-│   │   ├── voice/              # Voice agent widget
-│   │   └── dashboard/          # Analytics components
+│   │   └── auth/               # Auth shell, login, signup, guard
 │   ├── pages/
 │   │   ├── TemplateLandingPage # Marketing landing page
 │   │   ├── SetupPage           # Onboarding wizard
@@ -161,6 +213,8 @@ voice-agent-one/
 │   │   ├── CallPage            # Voice agent interface
 │   │   ├── DashboardPage       # Analytics dashboard
 │   │   └── PublicLandingPage   # Shareable public site
+│   ├── lib/
+│   │   └── audio.ts            # Speech model + mic analysis feeding the 3D
 │   ├── services/
 │   │   ├── openai.ts           # Content generation
 │   │   ├── elevenlabs.ts       # Agent management
@@ -184,7 +238,9 @@ voice-agent-one/
 | React 18 | UI Framework |
 | TypeScript | Type Safety |
 | Vite | Build Tool |
-| Tailwind CSS | Styling |
+| Tailwind CSS | Styling (two token systems, see Design) |
+| three.js + React Three Fiber | Spectrogram and diaphragm, lazily loaded |
+| Web Audio API | Mel-band analysis driving the 3D |
 | Zustand | State Management |
 | Framer Motion | Animations |
 | Recharts | Dashboard Charts |

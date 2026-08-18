@@ -1,6 +1,10 @@
 /**
  * Dashboard Page
  * Professional analytics dashboard with real ElevenLabs data
+ *
+ * Laid out as a monitoring bridge: a status strip of readouts across the top,
+ * the traffic plot, a success meter instead of a donut (a meter is read at a
+ * glance and a three-slice donut is not), then the call log itself.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,19 +12,11 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Phone,
-  Calendar,
-  TrendingUp,
-  Clock,
   RefreshCw,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  Star,
-  Loader2,
   ExternalLink,
-  Play,
-  AlertCircle,
   Settings,
+  ArrowRight,
+  Star,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -32,12 +28,10 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import { Header } from '../components/layout/Header';
-import { Button, Card, CardContent } from '../components/ui';
+import { Button } from '../components/ui';
+import { Legend, Lamp, Tag, Meter } from '../components/system/primitives';
 import { useAuthStore } from '../stores/authStore';
 import {
   useBusinessStore,
@@ -52,17 +46,56 @@ import {
 } from '../services/analytics';
 import { cn } from '../utils/cn';
 
-// Chart colors
-const COLORS = {
-  primary: '#3B82F6',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  purple: '#8B5CF6',
-  cyan: '#06B6D4',
+/* The plot uses the rack's own colours: amber is the signal being measured,
+   verdigris is the secondary series. No third hue is introduced. */
+const PLOT = {
+  signal: '#FF9D2E',
+  second: '#3E8E7E',
+  grid: '#272D35',
+  axis: '#5B5750',
 };
 
-const PIE_COLORS = [COLORS.success, COLORS.danger, '#64748B'];
+/** Tooltip drawn as a small panel so it belongs to the same machine. */
+const PanelTip: React.FC<any> = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="panel-lift px-3 py-2">
+      <div className="legend">{label}</div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="mt-1 flex items-center gap-2">
+          <span
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-jack"
+            style={{ background: p.color }}
+          />
+          <span className="readout text-[11px] text-bone">{p.value}</span>
+          <span className="legend">{p.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const Section: React.FC<{
+  label: string;
+  title: string;
+  hint?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ label, title, hint, right, children, className }) => (
+  <section className={cn('py-8', className)}>
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-edge-soft pb-3">
+      <div>
+        <Legend as="div">{label}</Legend>
+        <h2 className="display-lite mt-2 text-lg text-bone">{title}</h2>
+        {hint && <p className="mt-1 text-[13px] text-bone-dim">{hint}</p>}
+      </div>
+      {right}
+    </div>
+    <div className="mt-6">{children}</div>
+  </section>
+);
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -89,7 +122,7 @@ export const DashboardPage: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     if (!apiKey || !agentId) {
-      setError('Missing API key or Agent ID');
+      setError('This business has no ElevenLabs key or agent attached yet. Add them in Settings.');
       setIsLoading(false);
       return;
     }
@@ -103,7 +136,9 @@ export const DashboardPage: React.FC = () => {
       setLastRefresh(new Date());
     } catch (err) {
       console.error('Failed to fetch analytics:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
+      setError(
+        err instanceof Error ? err.message : 'Could not read the call history from ElevenLabs.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -126,491 +161,396 @@ export const DashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'success':
-        return 'text-green-400 bg-green-400/10';
-      case 'failure':
-        return 'text-red-400 bg-red-400/10';
-      default:
-        return 'text-gray-400 bg-gray-400/10';
-    }
-  };
-
-  // Prepare pie chart data
-  const pieData = analytics
-    ? [
-        { name: 'Successful', value: analytics.successfulCalls },
-        { name: 'Failed', value: analytics.failedCalls },
-        { name: 'Unknown', value: analytics.totalConversations - analytics.successfulCalls - analytics.failedCalls },
-      ].filter(d => d.value > 0)
-    : [];
+  const total = analytics?.totalConversations || 0;
+  const ok = analytics?.successfulCalls || 0;
+  const bad = analytics?.failedCalls || 0;
+  const unknown = Math.max(0, total - ok - bad);
 
   if (!activeBusiness || !activeVoiceAgent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-ink">
         <Header />
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <div className="mx-auto flex max-w-[80rem] items-center gap-3 px-5 py-20 sm:px-8">
+          <Lamp state="ready" pulse />
+          <Legend>Loading the business</Legend>
         </div>
       </div>
     );
   }
 
+  const stats: [string, React.ReactNode, string][] = [
+    ['Calls taken', total, 'Last 30 days'],
+    ['Answered well', ok, `${analytics?.successRate || 0}% of calls`],
+    ['Today', analytics?.todaysCalls || 0, 'Since midnight'],
+    ['This week', analytics?.thisWeekCalls || 0, 'Last 7 days'],
+    ['Average call', formatDuration(analytics?.avgDurationSecs || 0), 'Per conversation'],
+    [
+      'Rating',
+      analytics?.avgRating ? `${analytics.avgRating}/5` : '—',
+      `${analytics?.ratedConversations || 0} rated`,
+    ],
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-ink">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <main className="mx-auto w-full max-w-[86rem] px-5 pb-16 sm:px-8">
+        {/* Page plate */}
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-edge-soft py-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Analytics Dashboard</h1>
-            <p className="text-slate-400">
-              Real-time insights for {activeVoiceAgent.name}
+            <Legend as="div">Call log</Legend>
+            <h1 className="display mt-3 text-[clamp(1.75rem,4vw,2.75rem)]">
+              {activeVoiceAgent.name}
+            </h1>
+            <p className="mt-2 text-[14px] text-bone-dim">
+              Everything this agent has handled for {activeBusiness.name}.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-slate-400">
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
+                className="h-3.5 w-3.5 appearance-none border border-edge-bright bg-ink shadow-recess checked:border-amber checked:bg-amber"
               />
-              Auto-refresh
+              <Legend>Refresh every 30s</Legend>
             </label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchData}
-              disabled={isLoading}
-              className="border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
-            >
-              <RefreshCw size={16} className={cn('mr-2', isLoading && 'animate-spin')} />
+            <Button variant="outline" size="sm" onClick={fetchData} disabled={isLoading}>
+              <RefreshCw size={12} className={cn(isLoading && 'animate-spin')} />
               Refresh
             </Button>
             <a
               href={`https://elevenlabs.io/app/conversational-ai/${agentId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+              className="legend inline-flex items-center gap-1.5 transition-colors hover:text-amber"
             >
-              <ExternalLink size={16} />
-              ElevenLabs
+              ElevenLabs <ExternalLink size={11} />
             </a>
           </div>
         </div>
 
-        {/* Error State */}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
+          <motion.p
+            role="alert"
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
+            className="mt-6 border border-clip-deep bg-clip/10 px-4 py-3 font-mono text-[12.5px] leading-snug text-clip"
           >
-            <AlertCircle className="text-red-400" size={20} />
-            <p className="text-red-400">{error}</p>
-          </motion.div>
+            {error}
+          </motion.p>
         )}
 
-        {/* Last Refresh */}
+        {/* ── STATUS STRIP ── */}
+        <dl className="mt-8 grid grid-cols-2 border border-edge-soft sm:grid-cols-3 lg:grid-cols-6">
+          {stats.map(([label, value, sub], i) => (
+            <div
+              key={label}
+              className={cn(
+                'border-edge-soft p-4',
+                i % 2 === 1 && 'border-l',
+                'sm:[&:not(:nth-child(3n+1))]:border-l',
+                i >= 2 && 'border-t sm:[&:nth-child(-n+3)]:border-t-0',
+                'lg:[&:not(:first-child)]:border-l lg:border-t-0'
+              )}
+            >
+              <dt className="legend">{label}</dt>
+              <dd className="readout mt-2 text-2xl leading-none text-bone">
+                {isLoading ? (
+                  <span className="inline-block h-6 w-10 animate-lamp-flicker bg-steel-high" />
+                ) : (
+                  value
+                )}
+              </dd>
+              <p className="mt-1.5 font-mono text-[10px] text-bone-faint">{sub}</p>
+            </div>
+          ))}
+        </dl>
+
         {lastRefresh && (
-          <p className="text-xs text-slate-500 mb-6">
-            Last updated: {lastRefresh.toLocaleTimeString()}
+          <p className="mt-3 flex items-center gap-2">
+            <Lamp state={autoRefresh ? 'ready' : 'off'} pulse={autoRefresh} />
+            <span className="readout text-[10px] text-bone-faint">
+              Read at {lastRefresh.toLocaleTimeString()}
+            </span>
           </p>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          {[
-            {
-              label: 'Total Calls',
-              value: analytics?.totalConversations || 0,
-              icon: Phone,
-              color: COLORS.primary,
-              subtext: 'Last 30 days',
-            },
-            {
-              label: 'Successful',
-              value: analytics?.successfulCalls || 0,
-              icon: CheckCircle,
-              color: COLORS.success,
-              subtext: `${analytics?.successRate || 0}% success rate`,
-            },
-            {
-              label: 'Today',
-              value: analytics?.todaysCalls || 0,
-              icon: Calendar,
-              color: COLORS.purple,
-              subtext: 'Calls today',
-            },
-            {
-              label: 'This Week',
-              value: analytics?.thisWeekCalls || 0,
-              icon: TrendingUp,
-              color: COLORS.cyan,
-              subtext: 'Last 7 days',
-            },
-            {
-              label: 'Avg Duration',
-              value: formatDuration(analytics?.avgDurationSecs || 0),
-              icon: Clock,
-              color: COLORS.warning,
-              subtext: 'Per call',
-            },
-            {
-              label: 'Avg Rating',
-              value: analytics?.avgRating ? `${analytics.avgRating}/5` : 'N/A',
-              icon: Star,
-              color: '#F59E0B',
-              subtext: `${analytics?.ratedConversations || 0} rated`,
-            },
-          ].map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${stat.color}15` }}
-                    >
-                      <stat.icon size={20} style={{ color: stat.color }} />
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-white mb-1">
-                    {isLoading ? (
-                      <span className="inline-block w-12 h-6 bg-slate-700 rounded animate-pulse" />
-                    ) : (
-                      stat.value
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-500">{stat.label}</div>
-                  <div className="text-xs text-slate-600 mt-1">{stat.subtext}</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          {/* Calls Over Time - Area Chart */}
-          <Card className="lg:col-span-2 bg-slate-800/50 border-slate-700">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Calls This Week</h3>
-                  <p className="text-sm text-slate-400">Daily conversation volume</p>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.primary }} />
-                    <span className="text-slate-400">Calls</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.success }} />
-                    <span className="text-slate-400">Duration (min)</span>
-                  </div>
-                </div>
-              </div>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={analytics?.conversationsByDay || []}>
-                    <defs>
-                      <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorDuration" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.success} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="date" stroke="#64748B" fontSize={12} />
-                    <YAxis stroke="#64748B" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: '#F8FAFC' }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      name="Calls"
-                      stroke={COLORS.primary}
-                      fillOpacity={1}
-                      fill="url(#colorCalls)"
-                      strokeWidth={2}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="duration"
-                      name="Duration (min)"
-                      stroke={COLORS.success}
-                      fillOpacity={1}
-                      fill="url(#colorDuration)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Success Rate Pie Chart */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="p-6">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white">Call Success Rate</h3>
-                <p className="text-sm text-slate-400">Conversation outcomes</p>
-              </div>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {pieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1E293B',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-sm text-slate-400">Successful</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-sm text-slate-400">Failed</span>
-                </div>
-              </div>
-              <div className="text-center mt-4">
-                <span className="text-3xl font-bold text-white">{analytics?.successRate || 0}%</span>
-                <p className="text-sm text-slate-400">Success Rate</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Daily Bar Chart */}
-        <Card className="bg-slate-800/50 border-slate-700 mb-8">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white">Daily Performance</h3>
-                <p className="text-sm text-slate-400">Calls and duration by day</p>
-              </div>
-            </div>
+        {/* ── TRAFFIC ── */}
+        <div className="grid gap-x-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <Section label="Traffic" title="Calls this week" hint="Volume and total minutes per day.">
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics?.conversationsByDay || []} barGap={8}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="date" stroke="#64748B" fontSize={12} />
-                  <YAxis stroke="#64748B" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1E293B',
-                      border: '1px solid #334155',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: '#F8FAFC' }}
+                <AreaChart data={analytics?.conversationsByDay || []}>
+                  <defs>
+                    <linearGradient id="fillSignal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={PLOT.signal} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={PLOT.signal} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="fillSecond" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={PLOT.second} stopOpacity={0.24} />
+                      <stop offset="100%" stopColor={PLOT.second} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={PLOT.grid} strokeDasharray="2 4" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke={PLOT.axis}
+                    fontSize={10}
+                    fontFamily="IBM Plex Mono"
+                    tickLine={false}
+                    axisLine={{ stroke: PLOT.grid }}
                   />
-                  <Bar dataKey="count" name="Calls" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="duration" name="Duration (min)" fill={COLORS.purple} radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <YAxis
+                    stroke={PLOT.axis}
+                    fontSize={10}
+                    fontFamily="IBM Plex Mono"
+                    tickLine={false}
+                    axisLine={false}
+                    width={28}
+                  />
+                  <Tooltip content={<PanelTip />} cursor={{ stroke: PLOT.grid }} />
+                  <Area
+                    type="monotone"
+                    dataKey="count"
+                    name="Calls"
+                    stroke={PLOT.signal}
+                    fill="url(#fillSignal)"
+                    strokeWidth={1.5}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="duration"
+                    name="Minutes"
+                    stroke={PLOT.second}
+                    fill="url(#fillSecond)"
+                    strokeWidth={1.5}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Recent Conversations */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white">Recent Conversations</h3>
-                <p className="text-sm text-slate-400">Latest calls and their outcomes</p>
-              </div>
-              <Link to="/call">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-slate-600 text-slate-300 hover:text-white"
-                >
-                  <Phone size={16} className="mr-2" />
-                  Open Call Page
+            <div className="mt-4 flex items-center gap-6">
+              {[
+                ['Calls', PLOT.signal],
+                ['Minutes', PLOT.second],
+              ].map(([l, c]) => (
+                <span key={l} className="flex items-center gap-2">
+                  <span aria-hidden className="h-px w-4" style={{ background: c }} />
+                  <Legend>{l}</Legend>
+                </span>
+              ))}
+            </div>
+          </Section>
+
+          {/* A meter, not a donut. Success rate is one number on a scale. */}
+          <Section label="Outcome" title="How they ended" hint="Across the last 30 days.">
+            <div className="readout text-5xl leading-none text-bone">
+              {analytics?.successRate || 0}
+              <span className="text-2xl text-amber">%</span>
+            </div>
+            <Legend as="div" className="mt-2">
+              Resolved successfully
+            </Legend>
+
+            <Meter
+              value={(analytics?.successRate || 0) / 100}
+              className="mt-6"
+              segments={20}
+              showScale={false}
+            />
+
+            <dl className="mt-6 divide-y divide-edge-soft border-y border-edge-soft">
+              {[
+                ['Resolved', ok, 'ready' as const],
+                ['Failed', bad, 'clip' as const],
+                ['Not classified', unknown, 'neutral' as const],
+              ].map(([label, value, tone]) => (
+                <div key={label as string} className="flex items-center justify-between py-2.5">
+                  <dt className="flex items-center gap-2">
+                    <Lamp state={tone === 'ready' ? 'ready' : tone === 'clip' ? 'clip' : 'off'} />
+                    <span className="text-[13px] text-bone-dim">{label as string}</span>
+                  </dt>
+                  <dd className="readout text-[13px] text-bone">{value as number}</dd>
+                </div>
+              ))}
+            </dl>
+          </Section>
+        </div>
+
+        {/* ── DAILY ── */}
+        <Section label="By day" title="Daily performance" hint="Calls against minutes on air.">
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics?.conversationsByDay || []} barGap={4}>
+                <CartesianGrid stroke={PLOT.grid} strokeDasharray="2 4" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke={PLOT.axis}
+                  fontSize={10}
+                  fontFamily="IBM Plex Mono"
+                  tickLine={false}
+                  axisLine={{ stroke: PLOT.grid }}
+                />
+                <YAxis
+                  stroke={PLOT.axis}
+                  fontSize={10}
+                  fontFamily="IBM Plex Mono"
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip content={<PanelTip />} cursor={{ fill: 'rgba(231,225,212,0.04)' }} />
+                <Bar dataKey="count" name="Calls" fill={PLOT.signal} />
+                <Bar dataKey="duration" name="Minutes" fill={PLOT.second} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Section>
+
+        {/* ── THE LOG ── */}
+        <Section
+          label="Transcripts"
+          title="Recent conversations"
+          hint="Newest first."
+          right={
+            <Link to="/call">
+              <Button variant="outline" size="sm">
+                <Phone size={12} /> Test the agent
+              </Button>
+            </Link>
+          }
+        >
+          {isLoading ? (
+            <ul className="divide-y divide-edge-soft border-y border-edge-soft">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className="flex items-center gap-4 py-4">
+                  <span className="h-2 w-2 animate-lamp-flicker rounded-jack bg-steel-high" />
+                  <span className="h-3 w-1/3 animate-lamp-flicker bg-steel-high" />
+                  <span className="ml-auto h-3 w-16 animate-lamp-flicker bg-steel-high" />
+                </li>
+              ))}
+            </ul>
+          ) : !analytics || analytics.conversations.length === 0 ? (
+            <div className="max-w-lg py-8">
+              <h3 className="display-lite text-lg text-bone">Nothing logged yet</h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-bone-dim">
+                As soon as someone talks to {activeVoiceAgent.name}, the call appears here with
+                its duration, outcome and a written summary. Try it yourself first.
+              </p>
+              <Link to="/call" className="mt-5 inline-block">
+                <Button size="md">
+                  Start a test call <ArrowRight size={13} />
                 </Button>
               </Link>
             </div>
+          ) : (
+            <>
+              <div className="hidden grid-cols-[auto_minmax(0,3fr)_auto_auto_auto] items-center gap-4 border-b border-edge px-1 pb-2 md:grid">
+                <span className="w-2" />
+                <Legend>Summary</Legend>
+                <Legend>Length</Legend>
+                <Legend>When</Legend>
+                <Legend className="text-right">Outcome</Legend>
+              </div>
 
-            {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 bg-slate-700/30 rounded-xl animate-pulse">
-                    <div className="w-10 h-10 bg-slate-600 rounded-full" />
-                    <div className="flex-1">
-                      <div className="h-4 bg-slate-600 rounded w-1/3 mb-2" />
-                      <div className="h-3 bg-slate-600 rounded w-1/4" />
-                    </div>
-                    <div className="h-6 w-20 bg-slate-600 rounded-full" />
-                  </div>
-                ))}
-              </div>
-            ) : analytics?.conversations.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-2xl bg-slate-700 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare size={32} className="text-slate-500" />
-                </div>
-                <h4 className="text-lg font-medium text-white mb-2">No conversations yet</h4>
-                <p className="text-slate-400 mb-4">Start a conversation to see analytics here</p>
-                <Link to="/call">
-                  <Button className="bg-blue-500 hover:bg-blue-600">
-                    <Play size={16} className="mr-2" />
-                    Start a Call
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {analytics?.conversations.map((conversation, index) => (
-                  <motion.div
-                    key={conversation.conversation_id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl hover:bg-slate-700/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-full flex items-center justify-center',
-                          getStatusColor(conversation.call_successful)
-                        )}
-                      >
-                        {conversation.call_successful === 'success' ? (
-                          <CheckCircle size={20} />
-                        ) : conversation.call_successful === 'failure' ? (
-                          <XCircle size={20} />
-                        ) : (
-                          <MessageSquare size={20} />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-white text-sm">
-                          {conversation.call_summary_title || 'Conversation'}
+              <ul className="divide-y divide-edge-soft border-b border-edge-soft">
+                {analytics.conversations.map((c, index) => {
+                  const good = c.call_successful === 'success';
+                  const failed = c.call_successful === 'failure';
+                  return (
+                    <motion.li
+                      key={c.conversation_id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(index * 0.03, 0.3) }}
+                      className="grid items-start gap-x-4 gap-y-2 px-1 py-4 transition-colors hover:bg-steel-lift md:grid-cols-[auto_minmax(0,3fr)_auto_auto_auto] md:items-center"
+                    >
+                      <Lamp state={good ? 'ready' : failed ? 'clip' : 'off'} className="mt-1.5 md:mt-0" />
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] text-bone">
+                          {c.call_summary_title || 'Conversation'}
                         </p>
-                        <div className="flex items-center gap-3 text-xs text-slate-400">
-                          <span>{formatDuration(conversation.call_duration_secs)}</span>
-                          <span>•</span>
-                          <span>{formatRelativeTime(conversation.start_time_unix_secs)}</span>
-                          <span>•</span>
-                          <span>{conversation.message_count} messages</span>
-                        </div>
-                        {conversation.transcript_summary && (
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-                            {conversation.transcript_summary}
+                        {c.transcript_summary && (
+                          <p className="mt-1 line-clamp-1 text-[12.5px] text-bone-faint">
+                            {c.transcript_summary}
                           </p>
                         )}
+                        <p className="mt-1 font-mono text-[10px] text-bone-faint">
+                          {c.message_count} messages
+                        </p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {conversation.rating && (
-                        <div className="flex items-center gap-1 text-yellow-400">
-                          <Star size={14} fill="currentColor" />
-                          <span className="text-sm">{conversation.rating}</span>
-                        </div>
-                      )}
-                      <span
-                        className={cn(
-                          'px-3 py-1 rounded-full text-xs font-medium capitalize',
-                          getStatusColor(conversation.call_successful)
-                        )}
-                      >
-                        {conversation.call_successful}
+
+                      <span className="readout text-[12px] text-bone-dim">
+                        {formatDuration(c.call_duration_secs)}
                       </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      <span className="readout text-[12px] text-bone-faint">
+                        {formatRelativeTime(c.start_time_unix_secs)}
+                      </span>
 
-        {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to="/call">
-            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 hover:border-blue-500/40 transition-colors cursor-pointer">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <Phone size={24} className="text-blue-400" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white">Test Agent</h4>
-                  <p className="text-sm text-slate-400">Start a test conversation</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                      <span className="flex items-center justify-start gap-2 md:justify-end">
+                        {c.rating && (
+                          <span className="flex items-center gap-1 text-amber">
+                            <Star size={11} fill="currentColor" />
+                            <span className="readout text-[11px]">{c.rating}</span>
+                          </span>
+                        )}
+                        <Tag tone={good ? 'ready' : failed ? 'clip' : 'neutral'}>
+                          {c.call_successful}
+                        </Tag>
+                      </span>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </Section>
 
-          <Link to="/settings/agent">
-            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-pointer">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Settings size={24} className="text-purple-400" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white">Edit Agent</h4>
-                  <p className="text-sm text-slate-400">Customize behavior</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <a
-            href={`https://elevenlabs.io/app/conversational-ai/${agentId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20 hover:border-cyan-500/40 transition-colors cursor-pointer">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                  <ExternalLink size={24} className="text-cyan-400" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white">ElevenLabs Console</h4>
-                  <p className="text-sm text-slate-400">Advanced settings</p>
-                </div>
-              </CardContent>
-            </Card>
-          </a>
-        </div>
-      </div>
+        {/* ── ELSEWHERE ── */}
+        <nav className="grid gap-px border border-edge-soft bg-edge-soft sm:grid-cols-3">
+          {[
+            { to: '/call', label: 'Test the agent', hint: 'Open the line yourself', icon: Phone },
+            { to: '/settings/agent', label: 'Edit the agent', hint: 'Prompt, voice, tools', icon: Settings },
+            {
+              to: `https://elevenlabs.io/app/conversational-ai/${agentId}`,
+              label: 'ElevenLabs console',
+              hint: 'Advanced settings',
+              icon: ExternalLink,
+              external: true,
+            },
+          ].map((a) => {
+            const inner = (
+              <>
+                <a.icon size={14} className="text-bone-faint transition-colors group-hover:text-amber" />
+                <span className="min-w-0 flex-1">
+                  <span className="display-lite block text-[13px] text-bone">{a.label}</span>
+                  <span className="mt-0.5 block text-[12.5px] text-bone-dim">{a.hint}</span>
+                </span>
+                <ArrowRight
+                  size={13}
+                  className="text-bone-faint transition-transform group-hover:translate-x-1"
+                />
+              </>
+            );
+            const cls =
+              'group flex items-center gap-3.5 bg-ink p-5 transition-colors hover:bg-steel';
+            return a.external ? (
+              <a key={a.to} href={a.to} target="_blank" rel="noopener noreferrer" className={cls}>
+                {inner}
+              </a>
+            ) : (
+              <Link key={a.to} to={a.to} className={cls}>
+                {inner}
+              </Link>
+            );
+          })}
+        </nav>
+      </main>
     </div>
   );
 };

@@ -4,7 +4,7 @@
  * Provides testing, editing, and embed/download options
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
@@ -17,8 +17,6 @@ import {
   Copy,
   Check,
   ExternalLink,
-  Mic,
-  Volume2,
   Globe,
   Smartphone,
   Monitor,
@@ -34,6 +32,8 @@ import {
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button, Card, CardContent } from '../components/ui';
+import { Legend, Lamp } from '../components/system/primitives';
+import { CapsuleDisplay } from '../components/three/CapsuleDisplay';
 import { useAuthStore } from '../stores/authStore';
 import {
   useBusinessStore,
@@ -261,26 +261,57 @@ export default function Page() {
   const isConnected = conversation.status === 'connected';
   const isConnecting = conversation.status === 'connecting';
 
+  // Drives the capsule membrane from the SDK's own analyser, read per frame so
+  // it never costs a React render.
+  const levelRef = useRef(0);
+  useEffect(() => {
+    if (!isConnected) {
+      levelRef.current = 0;
+      return;
+    }
+    let raf = 0;
+    const mean = (d: Uint8Array | undefined) => {
+      if (!d?.length) return 0;
+      let sum = 0;
+      for (let i = 0; i < d.length; i++) sum += d[i];
+      return sum / d.length / 255;
+    };
+    const tick = () => {
+      let v = 0;
+      try {
+        v = conversation.isSpeaking
+          ? mean(conversation.getOutputByteFrequencyData())
+          : mean(conversation.getInputByteFrequencyData());
+      } catch {
+        v = 0;
+      }
+      levelRef.current = Math.min(1, v * 2.4);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isConnected, conversation]);
+
   if (!activeBusiness || !activeVoiceAgent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-ink">
         <Header />
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-amber animate-spin" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-ink">
       <Header />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Voice Agent Dashboard</h1>
-          <p className="text-slate-400">
+          <h1 className="display text-[clamp(1.75rem,4vw,2.5rem)] mb-3">Voice Agent Dashboard</h1>
+          <p className="text-bone-dim">
             Test, edit, and integrate your AI voice agent
           </p>
         </div>
@@ -289,23 +320,23 @@ export default function Page() {
           {/* Left Column - Agent Info & Test */}
           <div className="lg:col-span-2 space-y-6">
             {/* Agent Card */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-steel border-edge-soft">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <Bot size={32} className="text-white" />
+                    <div className="flex h-12 w-12 items-center justify-center border border-amber-deep bg-amber-shadow">
+                      <Bot size={32} className="text-bone" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">
+                      <h2 className="display-lite text-lg text-bone">
                         {activeVoiceAgent.name}
                       </h2>
-                      <p className="text-slate-400">
+                      <p className="text-bone-dim">
                         {activeVoiceAgent.personality || 'AI Voice Assistant'}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        <span className="text-xs text-green-400">Active</span>
+                        <span className="w-2 h-2 rounded-full bg-patina"></span>
+                        <span className="text-xs text-patina-glow">Active</span>
                       </div>
                     </div>
                   </div>
@@ -313,7 +344,7 @@ export default function Page() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate('/settings/agent')}
-                    className="border-slate-600 text-slate-300 hover:text-white"
+                    className="border-edge text-bone-dim hover:text-bone"
                   >
                     <Settings size={16} className="mr-2" />
                     Edit Agent
@@ -321,87 +352,75 @@ export default function Page() {
                 </div>
 
                 {/* First Message Preview */}
-                <div className="bg-slate-900/50 rounded-xl p-4 mb-6">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">First Message</p>
-                  <p className="text-slate-300 italic">
+                <div className="bg-ink/50 rounded-panel p-4 mb-6">
+                  <p className="text-xs text-bone-faint uppercase tracking-wide mb-2">First Message</p>
+                  <p className="text-bone-dim italic">
                     "{activeVoiceAgent.first_message || 'Hello! How can I help you today?'}"
                   </p>
                 </div>
 
-                {/* Test Agent Section */}
-                <div className="border-t border-slate-700 pt-6">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Sparkles size={20} className="text-yellow-400" />
-                    Test Your Agent
-                  </h3>
+                {/* Test the agent — the same capsule the call page uses, so
+                    the owner and the caller watch the same instrument. */}
+                <div className="border-t border-edge-soft pt-6">
+                  <div className="mb-5 flex items-center gap-3">
+                    <Legend>Test the line</Legend>
+                    <span aria-hidden className="h-px flex-1 bg-edge-soft" />
+                    <Lamp state={isConnected ? 'live' : isConnecting ? 'ready' : 'off'} pulse={isConnecting} />
+                  </div>
 
-                  {isConnected || isConnecting ? (
-                    <div className="text-center py-8">
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ repeat: Infinity, duration: 1.5 }}
-                        className={cn(
-                          'w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center',
-                          isConnected ? 'bg-green-500' : 'bg-blue-500'
-                        )}
-                      >
-                        {isConnecting ? (
-                          <Loader2 size={40} className="text-white animate-spin" />
-                        ) : (
-                          <Volume2 size={40} className="text-white" />
-                        )}
-                      </motion.div>
-                      <p className="text-white font-medium mb-2">
-                        {isConnecting ? 'Connecting...' : 'Agent is listening...'}
-                      </p>
-                      {conversation.isSpeaking && (
-                        <p className="text-green-400 text-sm">Agent is speaking</p>
+                  <div className="flex flex-col items-center">
+                    <CapsuleDisplay
+                      mode={
+                        isConnecting
+                          ? 'connecting'
+                          : !isConnected
+                          ? 'idle'
+                          : conversation.isSpeaking
+                          ? 'speaking'
+                          : 'listening'
+                      }
+                      levelRef={levelRef}
+                      name={activeVoiceAgent.name}
+                      className="w-full"
+                    />
+
+                    <div className="mt-6 w-full max-w-[22rem]">
+                      {isConnected || isConnecting ? (
+                        <Button variant="danger" size="lg" onClick={stopTestConversation} className="w-full">
+                          <Square size={14} /> End test
+                        </Button>
+                      ) : (
+                        <>
+                          <Button size="lg" onClick={startTestConversation} className="w-full">
+                            <Play size={14} /> Start a test call
+                          </Button>
+                          <p className="mt-3 text-center text-[13px] text-bone-dim">
+                            You will be asked for the microphone. Nothing is recorded here.
+                          </p>
+                        </>
                       )}
-                      <Button
-                        onClick={stopTestConversation}
-                        className="mt-4 bg-red-500 hover:bg-red-600"
-                      >
-                        <Square size={16} className="mr-2" />
-                        End Test
-                      </Button>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="w-24 h-24 rounded-full bg-slate-700 mx-auto mb-4 flex items-center justify-center">
-                        <Mic size={40} className="text-slate-400" />
-                      </div>
-                      <p className="text-slate-400 mb-4">
-                        Click to start a test conversation with your agent
-                      </p>
-                      <Button
-                        onClick={startTestConversation}
-                        className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                      >
-                        <Play size={16} className="mr-2" />
-                        Start Test Call
-                      </Button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Agent ID Info */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-steel border-edge-soft">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Agent Details</h3>
+                <h3 className="display-lite text-[15px] text-bone mb-4">Agent Details</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                    <span className="text-slate-400">Agent ID</span>
-                    <code className="text-sm text-blue-400 font-mono">{agentId}</code>
+                  <div className="flex items-center justify-between p-3 bg-ink/50 rounded-panel">
+                    <span className="text-bone-dim">Agent ID</span>
+                    <code className="text-sm text-amber font-mono">{agentId}</code>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                    <span className="text-slate-400">Business</span>
-                    <span className="text-white">{activeBusiness.name}</span>
+                  <div className="flex items-center justify-between p-3 bg-ink/50 rounded-panel">
+                    <span className="text-bone-dim">Business</span>
+                    <span className="text-bone">{activeBusiness.name}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                    <span className="text-slate-400">Industry</span>
-                    <span className="text-white capitalize">{activeBusiness.industry}</span>
+                  <div className="flex items-center justify-between p-3 bg-ink/50 rounded-panel">
+                    <span className="text-bone-dim">Industry</span>
+                    <span className="text-bone capitalize">{activeBusiness.industry}</span>
                   </div>
                 </div>
               </CardContent>
@@ -412,19 +431,19 @@ export default function Page() {
           <div className="space-y-6">
             {/* Upgrade to Website Card - Only for agent_only users */}
             {activeBusiness.product_type === 'agent_only' && !showUpgradeSuccess && (
-              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-500/30 overflow-hidden">
+              <Card className="bg-steel border-patina/40 overflow-hidden">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                      <Rocket size={24} className="text-white" />
+                    <div className="flex h-10 w-10 items-center justify-center border border-edge-bright bg-steel-high">
+                      <Rocket size={24} className="text-bone" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">Want a Website?</h3>
-                      <p className="text-sm text-purple-200">Get a professional landing page</p>
+                      <h3 className="display-lite text-[15px] text-bone">Want a Website?</h3>
+                      <p className="text-sm text-bone-dim">Get a professional landing page</p>
                     </div>
                   </div>
 
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-bone-dim text-sm mb-4">
                     Upgrade to get a beautiful, SEO-optimized landing page with your voice agent built-in.
                   </p>
 
@@ -435,8 +454,8 @@ export default function Page() {
                       { icon: Users, text: 'Build customer trust' },
                       { icon: Share2, text: 'Shareable public URL' },
                     ].map((item, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
-                        <item.icon size={14} className="text-purple-400" />
+                      <div key={index} className="flex items-center gap-2 text-sm text-bone-dim">
+                        <item.icon size={14} className="text-patina-glow" />
                         <span>{item.text}</span>
                       </div>
                     ))}
@@ -445,7 +464,7 @@ export default function Page() {
                   <button
                     onClick={handleUpgradeToWebsite}
                     disabled={isUpgrading}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium rounded-xl transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber text-ink hover:bg-amber-glow text-ink font-medium rounded-panel transition-all disabled:opacity-50"
                   >
                     {isUpgrading ? (
                       <>
@@ -466,18 +485,18 @@ export default function Page() {
 
             {/* Upgrade Success Card */}
             {showUpgradeSuccess && (
-              <Card className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 border-green-500/30 overflow-hidden">
+              <Card className="bg-steel border-patina/40 overflow-hidden">
                 <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
-                    <Check size={32} className="text-white" />
+                  <div className="w-16 h-16 rounded-full bg-patina flex items-center justify-center mx-auto mb-4">
+                    <Check size={32} className="text-bone" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Website Unlocked!</h3>
+                  <h3 className="display-lite text-lg text-bone mb-2">Website Unlocked!</h3>
                   <p className="text-green-200 text-sm mb-5">
                     Your professional landing page is ready. Your voice agent is automatically integrated.
                   </p>
                   <button
                     onClick={() => navigate('/site')}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-patina hover:bg-patina-glow text-bone font-medium rounded-panel transition-all"
                   >
                     <Globe size={18} />
                     View Your Website
@@ -488,57 +507,57 @@ export default function Page() {
             )}
 
             {/* Quick Actions */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-steel border-edge-soft">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+                <h3 className="display-lite text-[15px] text-bone mb-4">Quick Actions</h3>
                 <div className="space-y-3">
                   <button
                     onClick={() => setShowEmbedModal(true)}
-                    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border border-blue-500/20 rounded-xl transition-all group"
+                    className="w-full flex items-center justify-between p-4 bg-steel hover:bg-steel-high border border-amber/40 rounded-panel transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <Code size={20} className="text-blue-400" />
+                      <div className="flex h-9 w-9 items-center justify-center border border-edge bg-steel-lift">
+                        <Code size={20} className="text-amber" />
                       </div>
                       <div className="text-left">
-                        <p className="font-medium text-white">Get Embed Code</p>
-                        <p className="text-xs text-slate-400">Add to your website</p>
+                        <p className="font-medium text-bone">Get Embed Code</p>
+                        <p className="text-xs text-bone-dim">Add to your website</p>
                       </div>
                     </div>
-                    <ChevronRight size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                    <ChevronRight size={20} className="text-bone-dim group-hover:text-bone transition-colors" />
                   </button>
 
                   <button
                     onClick={() => navigate('/settings/agent')}
-                    className="w-full flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 rounded-xl transition-all group"
+                    className="w-full flex items-center justify-between p-4 bg-steel-lift hover:bg-steel-high border border-edge/30 rounded-panel transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-slate-600/50 flex items-center justify-center">
-                        <Settings size={20} className="text-slate-300" />
+                      <div className="w-10 h-10 rounded-panel bg-steel-high/50 flex items-center justify-center">
+                        <Settings size={20} className="text-bone-dim" />
                       </div>
                       <div className="text-left">
-                        <p className="font-medium text-white">Edit Agent</p>
-                        <p className="text-xs text-slate-400">Customize behavior</p>
+                        <p className="font-medium text-bone">Edit Agent</p>
+                        <p className="text-xs text-bone-dim">Customize behavior</p>
                       </div>
                     </div>
-                    <ChevronRight size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                    <ChevronRight size={20} className="text-bone-dim group-hover:text-bone transition-colors" />
                   </button>
 
                   {activeBusiness.product_type === 'website_and_agent' && (
                     <button
                       onClick={() => navigate('/site')}
-                      className="w-full flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 rounded-xl transition-all group"
+                      className="w-full flex items-center justify-between p-4 bg-steel-lift hover:bg-steel-high border border-edge/30 rounded-panel transition-all group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-slate-600/50 flex items-center justify-center">
-                          <Globe size={20} className="text-slate-300" />
+                        <div className="w-10 h-10 rounded-panel bg-steel-high/50 flex items-center justify-center">
+                          <Globe size={20} className="text-bone-dim" />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium text-white">View Website</p>
-                          <p className="text-xs text-slate-400">Your landing page</p>
+                          <p className="font-medium text-bone">View Website</p>
+                          <p className="text-xs text-bone-dim">Your landing page</p>
                         </div>
                       </div>
-                      <ChevronRight size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                      <ChevronRight size={20} className="text-bone-dim group-hover:text-bone transition-colors" />
                     </button>
                   )}
                 </div>
@@ -546,17 +565,17 @@ export default function Page() {
             </Card>
 
             {/* ElevenLabs Link */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-steel border-edge-soft">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">ElevenLabs Console</h3>
-                <p className="text-slate-400 text-sm mb-4">
+                <h3 className="display-lite text-[15px] text-bone mb-4">ElevenLabs Console</h3>
+                <p className="text-bone-dim text-sm mb-4">
                   Access advanced settings and analytics in ElevenLabs dashboard.
                 </p>
                 <a
                   href={`https://elevenlabs.io/app/conversational-ai/${agentId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+                  className="flex items-center gap-2 text-amber hover:text-amber text-sm"
                 >
                   Open in ElevenLabs
                   <ExternalLink size={14} />
@@ -574,58 +593,58 @@ export default function Page() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
             onClick={() => setShowEmbedModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-ink border border-edge-soft rounded-panel max-w-4xl w-full max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div className="flex items-center justify-between p-6 border-b border-edge-soft">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Embed Your Voice Agent</h2>
-                  <p className="text-slate-400 text-sm mt-1">Choose your platform and copy the code</p>
+                  <h2 className="display-lite text-lg text-bone">Embed Your Voice Agent</h2>
+                  <p className="text-bone-dim text-sm mt-1">Choose your platform and copy the code</p>
                 </div>
                 <button
                   onClick={() => setShowEmbedModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-steel rounded-panel transition-colors"
                 >
-                  <X size={20} className="text-slate-400" />
+                  <X size={20} className="text-bone-dim" />
                 </button>
               </div>
 
               <div className="flex h-[500px]">
                 {/* Platform Selector */}
-                <div className="w-64 border-r border-slate-700 p-4 overflow-y-auto">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Select Platform</p>
+                <div className="w-64 border-r border-edge-soft p-4 overflow-y-auto">
+                  <p className="text-xs text-bone-faint uppercase tracking-wide mb-3">Select Platform</p>
                   <div className="space-y-2">
                     {platforms.map((platform) => (
                       <button
                         key={platform.id}
                         onClick={() => setSelectedPlatform(platform.id)}
                         className={cn(
-                          'w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left',
+                          'w-full flex items-center gap-3 p-3 rounded-panel transition-all text-left',
                           selectedPlatform === platform.id
-                            ? 'bg-blue-500/20 border border-blue-500/30'
-                            : 'hover:bg-slate-800 border border-transparent'
+                            ? 'bg-amber-shadow border border-amber/40'
+                            : 'hover:bg-steel border border-transparent'
                         )}
                       >
                         <platform.icon
                           size={20}
-                          className={selectedPlatform === platform.id ? 'text-blue-400' : 'text-slate-400'}
+                          className={selectedPlatform === platform.id ? 'text-amber' : 'text-bone-dim'}
                         />
                         <div>
                           <p className={cn(
                             'font-medium',
-                            selectedPlatform === platform.id ? 'text-white' : 'text-slate-300'
+                            selectedPlatform === platform.id ? 'text-bone' : 'text-bone-dim'
                           )}>
                             {platform.name}
                           </p>
-                          <p className="text-xs text-slate-500">{platform.description}</p>
+                          <p className="text-xs text-bone-faint">{platform.description}</p>
                         </div>
                       </button>
                     ))}
@@ -634,8 +653,8 @@ export default function Page() {
 
                 {/* Code Display */}
                 <div className="flex-1 flex flex-col">
-                  <div className="flex items-center justify-between p-4 border-b border-slate-700">
-                    <p className="text-sm text-slate-400">
+                  <div className="flex items-center justify-between p-4 border-b border-edge-soft">
+                    <p className="text-sm text-bone-dim">
                       {platforms.find(p => p.id === selectedPlatform)?.name} Integration
                     </p>
                     <Button
@@ -643,7 +662,7 @@ export default function Page() {
                       onClick={copyCode}
                       className={cn(
                         'transition-all',
-                        copiedCode ? 'bg-green-500 hover:bg-green-600' : ''
+                        copiedCode ? 'bg-patina hover:bg-patina-glow' : ''
                       )}
                     >
                       {copiedCode ? (
@@ -659,8 +678,8 @@ export default function Page() {
                       )}
                     </Button>
                   </div>
-                  <div className="flex-1 overflow-auto p-4 bg-slate-950">
-                    <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
+                  <div className="flex-1 overflow-auto p-4 bg-ink">
+                    <pre className="text-sm text-bone-dim font-mono whitespace-pre-wrap">
                       {getEmbedCode(selectedPlatform)}
                     </pre>
                   </div>
@@ -668,13 +687,13 @@ export default function Page() {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+              <div className="p-4 border-t border-edge-soft bg-steel">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <Sparkles size={16} className="text-blue-400" />
+                  <div className="w-8 h-8 rounded-full bg-amber-shadow flex items-center justify-center">
+                    <Sparkles size={16} className="text-amber" />
                   </div>
-                  <p className="text-sm text-slate-400">
-                    <span className="text-white font-medium">Pro tip:</span> The widget will appear as a floating button in the corner of your website.
+                  <p className="text-sm text-bone-dim">
+                    <span className="text-bone font-medium">Pro tip:</span> The widget will appear as a floating button in the corner of your website.
                   </p>
                 </div>
               </div>
