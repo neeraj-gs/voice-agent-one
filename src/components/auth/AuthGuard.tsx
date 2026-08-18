@@ -5,8 +5,8 @@
 
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { useAuthStore, useIsAuthenticated, useAuthLoading } from '../../stores/authStore';
+import { Lamp, Legend } from '../system/primitives';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -27,10 +27,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   // Show loading while checking auth
   if (!isInitialized || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-ink">
+        <div className="flex items-center gap-2.5">
+          <Lamp state="ready" pulse />
+          <Legend>Checking your session</Legend>
         </div>
       </div>
     );

@@ -5,10 +5,11 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, Zap, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { cn } from '../../utils/cn';
+import { AuthShell } from './AuthShell';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,141 +31,66 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <Zap className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white">Voice Agent One</span>
+    <AuthShell
+      eyebrow="Session"
+      title="Sign in"
+      lede="Pick up where you left off."
+      footer={
+        <p className="text-[13.5px] text-bone-dim">
+          No account yet?{' '}
+          <Link to="/signup" className="link-underline text-bone">
+            Create one
           </Link>
-          <p className="text-slate-400">Welcome back! Sign in to continue.</p>
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          required
+        />
+
+        <div className="relative">
+          <Input
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your password"
+            autoComplete="current-password"
+            className="pr-11"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute right-3 top-[2.05rem] text-bone-faint transition-colors hover:text-amber"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-            </div>
+        {error && (
+          <p
+            role="alert"
+            className="border border-clip-deep bg-clip/10 px-3.5 py-2.5 font-mono text-[12px] leading-snug text-clip"
+          >
+            {error}
+          </p>
+        )}
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="w-full pl-12 pr-12 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
-              >
-                {error}
-              </motion.div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={cn(
-                'w-full py-3 px-4 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-2',
-                isLoading
-                  ? 'bg-blue-500/50 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25'
-              )}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-700" />
-            <span className="text-slate-500 text-sm">or</span>
-            <div className="flex-1 h-px bg-slate-700" />
-          </div>
-
-          {/* Sign Up Link */}
-          <div className="text-center">
-            <p className="text-slate-400">
-              Don't have an account?{' '}
-              <Link
-                to="/signup"
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-              >
-                Create one
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {/* Back to Template */}
-        <div className="text-center mt-6">
-          <Link to="/template" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">
-            ← Back to homepage
-          </Link>
-        </div>
-      </motion.div>
-    </div>
+        <Button type="submit" size="lg" isLoading={isLoading} className="w-full">
+          {isLoading ? 'Signing in' : 'Sign in'}
+          {!isLoading && <ArrowRight size={14} />}
+        </Button>
+      </form>
+    </AuthShell>
   );
 };
 
