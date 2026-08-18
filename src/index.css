@@ -1,5 +1,10 @@
 /**
- * Global Styles
+ * THE SIGNAL ROOM — material language
+ *
+ * Everything in here describes a physical object: a rack of broadcast gear.
+ * Panels are milled aluminium. Type is silkscreened. Lamps are lamps — they
+ * only light when a real state is true. There are no gradients for mood and
+ * no glass; the only translucency is the grain of the metal itself.
  */
 
 @tailwind base;
@@ -7,49 +12,250 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --rail-w: 4.5rem;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  * {
+    border-color: theme('colors.edge.soft');
+  }
+
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply antialiased;
+    @apply bg-ink font-sans text-bone antialiased;
+    font-size: 16px;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
 
+  /* The room has dust in the air. Fixed, so it never scrolls with content. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background-image: var(--grain);
+    opacity: 0.028;
+    mix-blend-mode: overlay;
+  }
+
+  ::selection {
+    background: theme('colors.amber.DEFAULT');
+    color: theme('colors.ink.DEFAULT');
+  }
+
+  /* The scrollbar is a fader track. */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
-
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-slate-800;
+    background: theme('colors.ink.DEFAULT');
+    border-left: 1px solid theme('colors.edge.soft');
   }
-
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-slate-600 rounded-full;
+    background: theme('colors.steel.high');
+    border: 2px solid theme('colors.ink.DEFAULT');
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.amber.deep');
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-slate-500;
+  :focus-visible {
+    outline: 2px solid theme('colors.amber.DEFAULT');
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Kill the browser's autofill wash — it destroys the panel material. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: theme('colors.bone.DEFAULT');
+    -webkit-box-shadow: 0 0 0 1000px theme('colors.steel.DEFAULT') inset;
+    caret-color: theme('colors.amber.DEFAULT');
   }
 }
 
 @layer components {
-  .voice-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* ── TYPE ROLES ───────────────────────────────────────────────────────── */
+
+  /* Panel legend: the tiny silkscreened label above a control. */
+  .legend {
+    @apply font-mono text-legend uppercase text-bone-faint;
+    font-weight: 500;
   }
 
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+  .legend-live {
+    @apply legend text-amber;
+  }
+
+  /* Display: Archivo pushed wide, the way a legend is stretched to fill a
+     panel face. Set tight and in caps — it is stamped, not written. */
+  .display {
+    font-family: theme('fontFamily.display');
+    font-variation-settings: 'wdth' 118, 'wght' 800;
+    text-transform: uppercase;
+    letter-spacing: -0.015em;
+    line-height: 0.86;
+    color: theme('colors.bone.DEFAULT');
+  }
+
+  .display-lite {
+    font-family: theme('fontFamily.display');
+    font-variation-settings: 'wdth' 112, 'wght' 500;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 0.95;
+  }
+
+  /* Readouts: numbers a machine prints. Tabular, always. */
+  .readout {
+    @apply font-mono tabular-nums;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── PANEL MATERIAL ───────────────────────────────────────────────────── */
+
+  /* A rack unit face. Milled edge top and bottom, nothing else. */
+  .panel {
+    @apply relative rounded-panel bg-steel shadow-bevel;
+    border: 1px solid theme('colors.edge.soft');
+  }
+
+  .panel-lift {
+    @apply relative rounded-panel bg-steel-lift shadow-bevel-deep;
+    border: 1px solid theme('colors.edge.DEFAULT');
+  }
+
+  /* A cut-out in the panel: displays, inputs, meters sit in these. */
+  .recess {
+    @apply rounded-panel bg-ink shadow-recess;
+    border: 1px solid theme('colors.edge.soft');
+  }
+
+  /* Hairline between rack units — the seam where two faces meet. */
+  .seam {
+    @apply relative;
+    border-top: 1px solid theme('colors.edge.soft');
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6);
+  }
+
+  /* Ventilation slots — used sparingly, on the footer and rack ends. */
+  .vents {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 3px,
+      rgba(0, 0, 0, 0.55) 3px 5px
+    );
+  }
+
+  /* Knurled grip texture for drag handles and rail ends. */
+  .knurl {
+    background-image: repeating-linear-gradient(
+      115deg,
+      rgba(231, 225, 212, 0.05) 0 1px,
+      transparent 1px 4px
+    );
+  }
+
+  /* ── LAMPS ────────────────────────────────────────────────────────────── */
+
+  .lamp {
+    @apply inline-block h-1.5 w-1.5 rounded-jack;
+    background: theme('colors.bone.faint');
+  }
+  .lamp-on {
+    background: theme('colors.amber.DEFAULT');
+    box-shadow: 0 0 8px 0 rgba(255, 157, 46, 0.75);
+  }
+  .lamp-ready {
+    background: theme('colors.patina.DEFAULT');
+    box-shadow: 0 0 8px 0 rgba(62, 142, 126, 0.7);
+  }
+  .lamp-clip {
+    background: theme('colors.clip.DEFAULT');
+    box-shadow: 0 0 8px 0 rgba(229, 72, 77, 0.8);
+  }
+
+  /* ── LINK ─────────────────────────────────────────────────────────────── */
+
+  .link-underline {
+    @apply relative text-bone transition-colors duration-200;
+    background-image: linear-gradient(
+      theme('colors.amber.DEFAULT'),
+      theme('colors.amber.DEFAULT')
+    );
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+      color 0.2s ease;
+  }
+  .link-underline:hover {
+    @apply text-amber;
+    background-size: 100% 1px;
   }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg;
+  /* Scale ticks: the ruled increments on a meter or frequency axis. */
+  .ticks-x {
+    background-image: repeating-linear-gradient(
+      to right,
+      theme('colors.edge.DEFAULT') 0 1px,
+      transparent 1px 100%
+    );
+    background-size: 12.5% 100%;
+  }
+  .ticks-y {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      theme('colors.edge.soft') 0 1px,
+      transparent 1px 100%
+    );
+    background-size: 100% 25%;
+  }
+
+  .rail-pad {
+    padding-left: var(--rail-w);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* Someone who has asked for stillness gets stillness. The spectrogram falls
+   back to a single held frame; nothing here loses meaning without motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
