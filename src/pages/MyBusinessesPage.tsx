@@ -1,6 +1,10 @@
 /**
  * My Businesses Page
  * Dashboard showing all user's businesses with management options
+ *
+ * A patch bay rather than a grid of cards: one strip per business, the lit
+ * lamp marking which one is currently routed. Rows scale to fifty businesses;
+ * a card grid does not.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -8,18 +12,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus,
-  Building2,
   Phone,
   Globe,
   Trash2,
   Settings,
-  Loader2,
-  AlertTriangle,
   Link2,
   Check,
   Bot,
+  ArrowRight,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import { Button } from '../components/ui';
+import { Legend, Lamp, Tag } from '../components/system/primitives';
 import { useUser } from '../stores/authStore';
 import {
   useBusinessStore,
@@ -36,7 +40,8 @@ export const MyBusinessesPage: React.FC = () => {
   const businesses = useBusinesses();
   const activeBusiness = useActiveBusiness();
   const isLoading = useBusinessLoading();
-  const { loadBusinesses, setActiveBusiness, deleteCurrentBusiness, getActiveBusinessConfig } = useBusinessStore();
+  const { loadBusinesses, setActiveBusiness, deleteCurrentBusiness, getActiveBusinessConfig } =
+    useBusinessStore();
   const { setBusinessConfig } = useConfigStore();
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -104,226 +109,211 @@ export const MyBusinessesPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-ink">
       <Header />
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
+      <main className="mx-auto w-full max-w-[76rem] px-5 py-8 sm:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-edge-soft pb-6">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">My Businesses</h1>
-            <p className="text-slate-400">
-              Manage your businesses and voice agents
+            <Legend as="div">Patch bay</Legend>
+            <h1 className="display mt-3 text-[clamp(1.75rem,4vw,2.75rem)]">Your businesses</h1>
+            <p className="mt-2 text-[14px] text-bone-dim">
+              {businesses.length === 0
+                ? 'Nothing patched in yet.'
+                : `${businesses.length} patched in. The lit one is what the rest of the app is showing.`}
             </p>
           </div>
-          <Link
-            to="/setup"
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-blue-500/25"
-          >
-            <Plus size={20} />
-            Add Business
+          <Link to="/setup">
+            <Button size="md">
+              <Plus size={14} /> Add a business
+            </Button>
           </Link>
         </div>
 
-        {/* Loading State */}
+        {/* Loading */}
         {isLoading && businesses.length === 0 && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          <div className="flex items-center gap-3 py-20">
+            <Lamp state="ready" pulse />
+            <Legend>Reading the rack</Legend>
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Nothing here yet — an invitation, not an apology. */}
         {!isLoading && businesses.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
+            className="max-w-lg py-20"
           >
-            <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-6">
-              <Building2 className="w-10 h-10 text-slate-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-white mb-2">No businesses yet</h2>
-            <p className="text-slate-400 mb-6 max-w-md mx-auto">
-              Create your first business to start using Voice Agent One. Set up takes just a few minutes.
+            <h2 className="display text-[clamp(1.5rem,3vw,2.25rem)]">
+              The rack
+              <br />
+              is empty
+            </h2>
+            <p className="mt-4 text-[14.5px] leading-relaxed text-bone-dim">
+              Set up your first business and you will have a live agent taking calls in about
+              five minutes. You can add more later; there is no limit.
             </p>
-            <Link
-              to="/setup"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
-            >
-              <Plus size={20} />
-              Create Your First Business
+            <Link to="/setup" className="mt-7 inline-block">
+              <Button size="lg">
+                Set up the first one <ArrowRight size={14} />
+              </Button>
             </Link>
           </motion.div>
         )}
 
-        {/* Business Grid */}
+        {/* The bay */}
         {businesses.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {businesses.map((business, index) => (
-              <motion.div
-                key={business.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={cn(
-                  'relative bg-slate-800/50 border rounded-2xl overflow-hidden hover:border-slate-600 transition-all group',
-                  business.id === activeBusiness?.id
-                    ? 'border-blue-500 ring-1 ring-blue-500/50'
-                    : 'border-slate-700'
-                )}
-              >
-                {/* Active Badge */}
-                {business.id === activeBusiness?.id && (
-                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-blue-500/20 text-blue-400 text-xs font-medium rounded-full">
-                    Active
-                  </div>
-                )}
+          <div className="mt-8">
+            {/* Column legend — a real table header, so the rows read as data. */}
+            <div className="hidden grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_auto] items-center gap-4 border-b border-edge px-3 pb-2 lg:grid">
+              <span className="w-2" />
+              <Legend>Business</Legend>
+              <Legend>Line</Legend>
+              <Legend className="text-right">Controls</Legend>
+            </div>
 
-                <div className="p-6">
-                  {/* Business Icon */}
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
-                    <Building2 className="w-7 h-7 text-blue-400" />
-                  </div>
+            <ul>
+              {businesses.map((business, index) => {
+                const on = business.id === activeBusiness?.id;
+                const agentOnly = business.product_type === 'agent_only';
 
-                  {/* Business Info */}
-                  <h3 className="text-xl font-semibold text-white mb-1 truncate">
-                    {business.name}
-                  </h3>
-                  <p className="text-slate-400 text-sm capitalize mb-4">
-                    {business.industry}
-                  </p>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-                    {business.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone size={14} />
-                        {business.phone}
-                      </span>
+                return (
+                  <motion.li
+                    key={business.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(index * 0.04, 0.3) }}
+                    className={cn(
+                      'relative border-b border-edge-soft transition-colors',
+                      on ? 'bg-steel' : 'hover:bg-steel-lift'
                     )}
-                  </div>
+                  >
+                    <div className="grid items-center gap-x-4 gap-y-3 px-3 py-4 lg:grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_auto]">
+                      <Lamp state={on ? 'live' : 'off'} />
 
-                  {/* Quick Actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSelectBusiness(business.id, business.product_type)}
-                      disabled={isSwitching}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50",
-                        business.product_type === 'agent_only'
-                          ? 'bg-purple-500 hover:bg-purple-600'
-                          : 'bg-blue-500 hover:bg-blue-600'
-                      )}
-                    >
-                      {business.product_type === 'agent_only' ? (
-                        <>
-                          <Bot size={16} />
-                          Agent Dashboard
-                        </>
-                      ) : (
-                        <>
-                          <Globe size={16} />
-                          View Site
-                        </>
-                      )}
-                    </button>
-                    {/* Copy Public Link - only for website_and_agent */}
-                    {business.slug && business.product_type !== 'agent_only' && (
-                      <button
-                        onClick={() => copyPublicUrl(business.id, business.slug)}
-                        className={cn(
-                          'p-2.5 rounded-lg transition-colors',
-                          copiedId === business.id
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-slate-700 hover:bg-green-500/20 text-slate-300 hover:text-green-400'
-                        )}
-                        title="Copy public link"
-                      >
-                        {copiedId === business.id ? <Check size={18} /> : <Link2 size={18} />}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleOpenSettings(business.id)}
-                      disabled={isSwitching}
-                      className="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-50"
-                      title="Settings"
-                    >
-                      <Settings size={18} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(business.id)}
-                      className="p-2.5 bg-slate-700 hover:bg-red-500/20 rounded-lg text-slate-300 hover:text-red-400 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Delete Confirmation */}
-                {deleteConfirm === business.id && (
-                  <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-6">
-                    <div className="text-center">
-                      <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                        <AlertTriangle className="w-6 h-6 text-red-400" />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h3 className="display-lite truncate text-[15px] text-bone">
+                            {business.name}
+                          </h3>
+                          {on && <Tag tone="live">Routed</Tag>}
+                          <Tag>{agentOnly ? 'Agent only' : 'Site + agent'}</Tag>
+                        </div>
+                        <p className="legend mt-1.5">{business.industry}</p>
                       </div>
-                      <h4 className="text-white font-semibold mb-2">Delete Business?</h4>
-                      <p className="text-slate-400 text-sm mb-4">
-                        This will also delete the voice agent. This action cannot be undone.
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setDeleteConfirm(null)}
-                          className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition-colors"
-                          disabled={isDeleting}
+
+                      <div className="flex items-center gap-2 font-mono text-[12px] text-bone-dim">
+                        {business.phone ? (
+                          <>
+                            <Phone size={12} className="text-bone-faint" />
+                            {business.phone}
+                          </>
+                        ) : (
+                          <span className="text-bone-faint">No number set</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 lg:justify-end">
+                        <Button
+                          size="sm"
+                          variant={on ? 'primary' : 'outline'}
+                          disabled={isSwitching}
+                          onClick={() => handleSelectBusiness(business.id, business.product_type)}
                         >
-                          Cancel
+                          {agentOnly ? <Bot size={12} /> : <Globe size={12} />}
+                          {agentOnly ? 'Agent' : 'Site'}
+                        </Button>
+
+                        {business.slug && !agentOnly && (
+                          <button
+                            onClick={() => copyPublicUrl(business.id, business.slug)}
+                            title="Copy the public link"
+                            aria-label="Copy the public link"
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center border transition-colors',
+                              copiedId === business.id
+                                ? 'border-patina text-patina-glow'
+                                : 'border-edge text-bone-dim hover:border-edge-bright hover:text-bone'
+                            )}
+                          >
+                            {copiedId === business.id ? <Check size={13} /> : <Link2 size={13} />}
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleOpenSettings(business.id)}
+                          disabled={isSwitching}
+                          title="Settings"
+                          aria-label={`Settings for ${business.name}`}
+                          className="flex h-8 w-8 items-center justify-center border border-edge text-bone-dim transition-colors hover:border-edge-bright hover:text-bone disabled:opacity-40"
+                        >
+                          <Settings size={13} />
                         </button>
+
                         <button
-                          onClick={() => handleDeleteBusiness(business.id)}
-                          disabled={isDeleting}
-                          className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          onClick={() => setDeleteConfirm(business.id)}
+                          title="Remove"
+                          aria-label={`Remove ${business.name}`}
+                          className="flex h-8 w-8 items-center justify-center border border-edge text-bone-dim transition-colors hover:border-clip hover:text-clip"
                         >
-                          {isDeleting ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <>
-                              <Trash2 size={16} />
-                              Delete
-                            </>
-                          )}
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
 
-            {/* Add New Business Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: businesses.length * 0.1 }}
+                    {/* Removal is destructive and irreversible, so it says so
+                        in the row it affects rather than in a floating dialog. */}
+                    {deleteConfirm === business.id && (
+                      <div className="border-t border-clip-deep bg-clip/[0.07] px-3 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <p className="max-w-lg text-[13.5px] leading-snug text-bone">
+                            Removing <strong className="text-clip">{business.name}</strong> also
+                            deletes its voice agent and its call history. This cannot be undone.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isDeleting}
+                              onClick={() => setDeleteConfirm(null)}
+                            >
+                              Keep it
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              isLoading={isDeleting}
+                              onClick={() => handleDeleteBusiness(business.id)}
+                            >
+                              <Trash2 size={12} /> Remove for good
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.li>
+                );
+              })}
+            </ul>
+
+            <Link
+              to="/setup"
+              className="group mt-4 flex items-center gap-3 border border-dashed border-edge px-3 py-4 transition-colors hover:border-amber"
             >
-              <Link
-                to="/setup"
-                className="h-full min-h-[240px] flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl transition-colors group"
-              >
-                <div className="w-14 h-14 rounded-xl bg-slate-800 group-hover:bg-blue-500/20 flex items-center justify-center mb-4 transition-colors">
-                  <Plus className="w-7 h-7 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-400 group-hover:text-white transition-colors">
-                  Add New Business
-                </h3>
-                <p className="text-slate-500 text-sm text-center mt-1">
-                  Create another voice agent
-                </p>
-              </Link>
-            </motion.div>
+              <Plus size={14} className="text-bone-faint transition-colors group-hover:text-amber" />
+              <span className="display-lite text-[14px] text-bone-dim transition-colors group-hover:text-bone">
+                Add another business
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-edge-soft" />
+              <ArrowRight
+                size={13}
+                className="text-bone-faint transition-transform group-hover:translate-x-1"
+              />
+            </Link>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
